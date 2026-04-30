@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Floyd-Warshall & Repeating Bellman-Ford / 모든 쌍 최단 경로</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:8px;letter-spacing:.3px}
+.sub{max-width:1180px;color:#c9c9c9;line-height:1.65;margin-bottom:10px}
+#tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tab-btn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:7px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px}
+.tab-btn.active{background:rgba(86,156,214,.14);border-color:#569cd6;color:#9cdcfe}
+#step-counter{font-size:11px;color:#858585;margin-top:8px}
+#step-desc{margin-top:5px;padding:10px 12px 12px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0;line-height:1.7;display:flex;flex-direction:column;gap:7px;height:82px;overflow:auto}
+.desc-main{font-size:13px;color:#e0e0e0}
+.desc-formula{font-size:12px;color:#dcdcaa;word-break:break-word}
+.desc-formula code{font-family:inherit;color:#9cdcfe}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:13px 0 12px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#left-panel{flex:1 1 700px;min-width:min(100%,700px);display:flex;flex-direction:column;gap:10px}
+#right-panel{flex:1 1 430px;min-width:min(100%,430px);display:flex;flex-direction:column;gap:10px}
+#graph-panel{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:8px}
+#graph-panel svg{width:100%;display:block}
+.graph-note{font-size:11px;color:#858585;line-height:1.55;margin-top:8px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.meta-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:62px}
+.meta-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.meta-value{font-size:17px;font-weight:700;color:#dcdcaa;line-height:1.35;word-break:break-word}
+.meta-sub{font-size:11px;color:#9cdcfe;line-height:1.35}
+.matrix-wrap{overflow-x:auto;scrollbar-color:#3e3e42 #1e1e1e}
+.matrix-table{border-collapse:separate;border-spacing:4px;width:max-content;min-width:100%}
+.matrix-table th{min-width:42px;height:26px;text-align:center;font-size:10px;color:#858585;font-weight:400}
+.matrix-table td{min-width:54px;height:36px;text-align:center;border:1px solid #343434;border-radius:5px;background:#1f1f1f;color:#d4d4d4;font-weight:700;transition:all .2s}
+.matrix-table td.self{color:#9cdcfe}
+.matrix-table td.inf{color:#666}
+.matrix-table td.row{background:rgba(86,156,214,.08);border-color:#315f86}
+.matrix-table td.col{background:rgba(86,156,214,.06);border-color:#315f86}
+.matrix-table td.operand{background:rgba(220,220,170,.12);border-color:#dcdcaa;color:#dcdcaa}
+.matrix-table td.target{background:rgba(197,134,192,.18);border-color:#c586c0;color:#f4d7f0}
+.matrix-table td.updated{background:rgba(197,134,192,.18);border-color:#c586c0;color:#f4d7f0}
+.matrix-table td.pivot-cell{background:rgba(86,156,214,.16);border-color:#569cd6;color:#d9f2ff}
+.matrix-table td.from-cell{background:rgba(247,178,103,.16);border-color:#f7b267;color:#ffd8aa}
+.matrix-table td.to-cell{background:rgba(197,134,192,.18);border-color:#c586c0;color:#f4d7f0}
+.trace-line{padding:8px 10px;border-radius:4px;background:#1f1f1f;border:1px solid #343434;font-size:12px;line-height:1.6;color:#d4d4d4;word-break:break-word;height:74px;overflow:auto}
+.edge-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(156px,1fr));gap:6px}
+.edge-item{display:grid;grid-template-columns:45px 1fr 44px;gap:8px;align-items:center;padding:7px 8px;border-radius:6px;border:1px solid #343434;background:#1f1f1f}
+.edge-item.active{border-color:#f7b267;background:rgba(247,178,103,.12)}
+.edge-item.candidate{border-color:#dcdcaa;background:rgba(220,220,170,.08)}
+.edge-item.updated{border-color:#c586c0;background:rgba(197,134,192,.14)}
+.edge-item.result{border-color:#4ec9b0;background:rgba(78,201,176,.08)}
+.edge-no{font-size:10px;color:#858585}
+.edge-main{font-size:12px;color:#d4d4d4;font-weight:700}
+.edge-sub{font-size:10px;color:#858585;text-align:right}
+.path-list{display:flex;flex-direction:column;gap:7px;max-height:360px;overflow:auto;padding-right:2px}
+.path-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px}
+.path-card.focus{border-color:#f7b267;background:rgba(247,178,103,.08)}
+.path-card.update{border-color:#c586c0;background:rgba(197,134,192,.1)}
+.path-card.done{border-color:#4ec9b0;background:rgba(78,201,176,.08)}
+.path-head{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.path-body{font-size:12px;line-height:1.55;color:#d4d4d4}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin:12px 0}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;overflow-x:auto}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px 0 16px}
+.progress{width:min(100%,640px);height:8px;border-radius:999px;border:1px solid #3e3e42;background:#2d2d2d;overflow:hidden}
+.progress-bar{height:100%;width:0;background:#569cd6}
+.button-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;min-width:70px;min-height:34px;padding:7px 14px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#343434}
+.nbtn:disabled{opacity:.35;cursor:default}
+.help{font-size:11px;color:#858585;text-align:center}
+#viewer-hotkeys{display:none!important}
+.edge-path{fill:none;stroke:#5a5a5a;stroke-width:2.2;opacity:.78}
+.edge-path.candidate{stroke:#dcdcaa;stroke-width:3.2;opacity:1}
+.edge-path.active{stroke:#f7b267;stroke-width:3.4;opacity:1}
+.edge-path.updated{stroke:#c586c0;stroke-width:3.6;opacity:1}
+.edge-path.result{stroke:#4ec9b0;stroke-width:3.4;opacity:1}
+.arrow-head{fill:#5a5a5a;opacity:.9}
+.arrow-head.candidate{fill:#dcdcaa;opacity:1}
+.arrow-head.active{fill:#f7b267;opacity:1}
+.arrow-head.updated{fill:#c586c0;opacity:1}
+.arrow-head.result{fill:#4ec9b0;opacity:1}
+.weight-label{font-size:12px;fill:#d4d4d4;font-weight:700;paint-order:stroke;stroke:#252526;stroke-width:4px;stroke-linejoin:round}
+.node-circle{fill:#2d2d2d;stroke:#606060;stroke-width:2.2}
+.node-label{font-size:14px;fill:#d4d4d4;font-weight:700;text-anchor:middle;dominant-baseline:middle}
+.node-role-bg{fill:#1f1f1f;stroke:#3e3e42;stroke-width:1.2}
+.node-role{font-size:10px;fill:#dcdcaa;text-anchor:middle;dominant-baseline:middle;font-weight:700}
+.node.pivot .node-circle{fill:rgba(86,156,214,.16);stroke:#569cd6}
+.node.source .node-circle{fill:rgba(156,220,254,.14);stroke:#9cdcfe}
+.node.from .node-circle{fill:rgba(247,178,103,.16);stroke:#f7b267}
+.node.to .node-circle{fill:rgba(197,134,192,.18);stroke:#c586c0}
+@media (max-width:1180px){#main-content{flex-direction:column}#left-panel,#right-panel{flex:1 1 auto}}
+@media (max-width:720px){body{padding:12px}.meta-grid{grid-template-columns:1fr}.edge-list{grid-template-columns:1fr}.matrix-table td{min-width:48px}.nbtn{flex:1 1 88px}h1{font-size:18px;line-height:1.35}}
+</style>
+</head>
+<body>
+<h1>Floyd-Warshall & Repeating Bellman-Ford / 모든 쌍 최단 경로</h1>
+<p class="sub">제공하신 C++ 코드의 두 함수를 하나의 HTML에서 비교합니다. 플로이드-워셜은 첫 번째 <code>k = 0</code> 루프의 모든 <code>i, j</code> 비교를 보여주고, 반복 벨만-포드는 첫 번째 시작 정점 <code>s = 0</code>의 모든 pass와 모든 <code>i, j</code> 비교를 보여줍니다.</p>
+<div id="tabs"></div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend"></div>
+
+<div id="main-content">
+  <div id="left-panel">
+    <div id="graph-panel">
+      <svg id="gsvg" viewBox="0 0 760 430" aria-label="All pairs shortest path graph">
+        <g id="edge-group"></g>
+        <g id="weight-group"></g>
+        <g id="node-group"></g>
+      </svg>
+      <div id="graph-note" class="graph-note"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">Edge Order / 인접 행렬 순회 간선</div>
+      <div id="edge-list" class="edge-list"></div>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div class="sbox">
+      <div class="slabel">Runtime State / 실행 상태</div>
+      <div class="meta-grid">
+        <div class="meta-card"><div class="meta-name" id="meta-a-name"></div><div class="meta-value" id="meta-a-val"></div><div class="meta-sub" id="meta-a-sub"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-b-name"></div><div class="meta-value" id="meta-b-val"></div><div class="meta-sub" id="meta-b-sub"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-c-name"></div><div class="meta-value" id="meta-c-val"></div><div class="meta-sub" id="meta-c-sub"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-d-name"></div><div class="meta-value" id="meta-d-val"></div><div class="meta-sub" id="meta-d-sub"></div></div>
+      </div>
+    </div>
+    <div class="sbox"><div class="slabel">dist[][]</div><div id="dist-matrix" class="matrix-wrap"></div></div>
+    <div class="sbox"><div class="slabel">prev[][]</div><div id="prev-matrix" class="matrix-wrap"></div></div>
+    <div class="sbox"><div class="slabel">Formula / 비교식</div><div id="formula-box" class="trace-line"></div></div>
+    <div class="sbox"><div class="slabel">Paths / 경로 복원</div><div id="path-list" class="path-list"></div></div>
+  </div>
+</div>
+
+<div id="code-panel">
+  <div id="code-title"></div>
+  <div id="code-body"></div>
+</div>
+
+<div id="nav">
+  <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="button-row">
+    <button class="nbtn" id="reset" type="button">Home</button>
+    <button class="nbtn" id="prev" type="button">Prev</button>
+    <button class="nbtn" id="auto-btn" type="button">Play</button>
+    <button class="nbtn" id="next" type="button">Next</button>
+    <button class="nbtn" id="last" type="button">End</button>
+  </div>
+  <div class="help">ArrowLeft / ArrowRight / Home / End / Space / PageUp / PageDown</div>
+</div>
+
+<script>
+(function () {
+  const INF = Number.POSITIVE_INFINITY;
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const NODE_RADIUS = 24;
+  const ARROW_LENGTH = 13;
+  const ARROW_WIDTH = 9;
+  const V = 5;
+
+  const graph = [
+    [0.0, 3.0, 8.0, INF, -4.0],
+    [INF, 0.0, INF, 1.0, 7.0],
+    [INF, 4.0, 0.0, INF, INF],
+    [2.0, INF, -5.0, 0.0, INF],
+    [INF, INF, INF, 6.0, 0.0]
+  ];
+
+  const positions = {
+    0: { x: 375, y: 70 },
+    1: { x: 630, y: 155 },
+    2: { x: 560, y: 350 },
+    3: { x: 205, y: 350 },
+    4: { x: 120, y: 155 }
+  };
+
+  const curves = {
+    '0-2': { cx: 565, cy: 160 },
+    '1-3': { cx: 410, cy: 220 },
+    '1-4': { cx: 375, cy: 96 },
+    '3-0': { cx: 255, cy: 170 },
+    '4-3': { cx: 98, cy: 275 }
+  };
+
+  const labelOffsets = {
+    '0-1': { dx: 0, dy: -8 },
+    '0-4': { dx: -4, dy: -8 },
+    '1-4': { dx: 0, dy: -10 },
+    '3-0': { dx: -10, dy: -4 },
+    '4-3': { dx: -10, dy: 0 }
+  };
+
+  const edges = [];
+  for (let i = 0; i < V; i += 1) {
+    for (let j = 0; j < V; j += 1) {
+      if (i !== j && Number.isFinite(graph[i][j])) {
+        edges.push({ index: edges.length, from: i, to: j, weight: graph[i][j] });
+      }
+    }
+  }
+
+  const refs = {
+    tabs: document.getElementById('tabs'),
+    counter: document.getElementById('step-counter'),
+    desc: document.getElementById('step-desc'),
+    legend: document.getElementById('legend'),
+    graph: document.getElementById('gsvg'),
+    edgeGroup: document.getElementById('edge-group'),
+    weightGroup: document.getElementById('weight-group'),
+    nodeGroup: document.getElementById('node-group'),
+    graphNote: document.getElementById('graph-note'),
+    edgeList: document.getElementById('edge-list'),
+    distMatrix: document.getElementById('dist-matrix'),
+    prevMatrix: document.getElementById('prev-matrix'),
+    formula: document.getElementById('formula-box'),
+    paths: document.getElementById('path-list'),
+    codeTitle: document.getElementById('code-title'),
+    codeBody: document.getElementById('code-body'),
+    progress: document.getElementById('progress-bar'),
+    prev: document.getElementById('prev'),
+    next: document.getElementById('next'),
+    reset: document.getElementById('reset'),
+    last: document.getElementById('last'),
+    auto: document.getElementById('auto-btn'),
+    metaAName: document.getElementById('meta-a-name'),
+    metaAVal: document.getElementById('meta-a-val'),
+    metaASub: document.getElementById('meta-a-sub'),
+    metaBName: document.getElementById('meta-b-name'),
+    metaBVal: document.getElementById('meta-b-val'),
+    metaBSub: document.getElementById('meta-b-sub'),
+    metaCName: document.getElementById('meta-c-name'),
+    metaCVal: document.getElementById('meta-c-val'),
+    metaCSub: document.getElementById('meta-c-sub'),
+    metaDName: document.getElementById('meta-d-name'),
+    metaDVal: document.getElementById('meta-d-val'),
+    metaDSub: document.getElementById('meta-d-sub')
+  };
+
+  const configs = {
+    floyd: {
+      label: 'Floyd-Warshall / 플로이드-워셜',
+      codeTitle: 'void FloydWarshall(const vector<vector<double>>& graph)',
+      graphNote: '플로이드-워셜은 k를 새 경유 정점으로 허용하면서 dist_k와 prev_k 작업본을 갱신합니다. 첫 번째 k=0 루프는 25개 i,j 비교를 모두 보여줍니다.',
+      codeLines: [
+        { indent: 0, text: 'vector<vector<double>> dist = graph;' },
+        { indent: 0, text: 'vector<vector<int>> prev(V, vector<int>(V));' },
+        { indent: 0, text: 'for (int i = 0; i < V; i++)' },
+        { indent: 1, text: 'for (int j = 0; j < V; j++)' },
+        { indent: 2, text: 'prev[i][j] = (i == j || graph[i][j] == kInf) ? -1 : i;' },
+        { indent: 0, text: 'for (int k = 0; k < V; k++) {' },
+        { indent: 1, text: 'auto dist_k = dist;' },
+        { indent: 1, text: 'auto prev_k = prev;' },
+        { indent: 1, text: 'for (int i = 0; i < V; i++)' },
+        { indent: 2, text: 'for (int j = 0; j < V; j++)' },
+        { indent: 3, text: 'if (dist[i][j] > dist[i][k] + dist[k][j]) {' },
+        { indent: 4, text: 'dist_k[i][j] = dist[i][k] + dist[k][j];' },
+        { indent: 4, text: 'prev_k[i][j] = prev[k][j];' },
+        { indent: 3, text: '}' },
+        { indent: 1, text: 'swap(dist_k, dist);' },
+        { indent: 1, text: 'swap(prev_k, prev);' },
+        { indent: 1, text: 'PrintPaths(prev[i]);' },
+        { indent: 0, text: '}' }
+      ]
+    },
+    bellman: {
+      label: 'Repeating Bellman-Ford / 반복 벨만-포드',
+      codeTitle: 'void RepeatingBellmanFord(const vector<vector<double>>& graph)',
+      graphNote: '반복 벨만-포드는 시작 정점 s의 행만 Bellman-Ford 방식으로 완화합니다. 첫 번째 s=0 루프는 v=1..4의 모든 i,j 비교를 단계로 보여줍니다.',
+      codeLines: [
+        { indent: 0, text: 'vector<vector<double>> dist = graph;' },
+        { indent: 0, text: 'vector<vector<int>> prev(V, vector<int>(V));' },
+        { indent: 0, text: 'for (int i = 0; i < V; i++)' },
+        { indent: 1, text: 'for (int j = 0; j < V; j++)' },
+        { indent: 2, text: 'prev[i][j] = (i == j || graph[i][j] == kInf) ? -1 : i;' },
+        { indent: 0, text: 'for (int s = 0; s < V; s++) {' },
+        { indent: 1, text: 'for (int v = 1; v < V; v++) {' },
+        { indent: 2, text: 'auto dist_k = dist;' },
+        { indent: 2, text: 'auto prev_k = prev;' },
+        { indent: 2, text: 'for (int i = 0; i < V; i++)' },
+        { indent: 3, text: 'for (int j = 0; j < V; j++)' },
+        { indent: 4, text: 'if (dist[s][j] > dist[s][i] + graph[i][j]) {' },
+        { indent: 5, text: 'dist_k[s][j] = dist[s][i] + graph[i][j];' },
+        { indent: 5, text: 'prev_k[s][j] = i;' },
+        { indent: 4, text: '}' },
+        { indent: 2, text: 'swap(dist_k, dist);' },
+        { indent: 2, text: 'swap(prev_k, prev);' },
+        { indent: 2, text: 'PrintPaths(prev[s]);' },
+        { indent: 1, text: '}' },
+        { indent: 0, text: '}' }
+      ]
+    }
+  };
+
+  let mode = 'floyd';
+  let stepsByMode = {};
+  let steps = [];
+  let current = 0;
+  let timer = null;
+
+  function cloneMatrix(matrix) {
+    return matrix.map((row) => row.slice());
+  }
+
+  function initPrev(matrix) {
+    return matrix.map((row, i) => row.map((value, j) => (i === j || !Number.isFinite(value) ? -1 : i)));
+  }
+
+  function fmt(value) {
+    if (!Number.isFinite(value)) return '∞';
+    const rounded = Math.round(value);
+    return Math.abs(value - rounded) < 1e-9 ? String(rounded) : value.toFixed(1).replace(/\.0$/, '');
+  }
+
+  function prevText(value) {
+    return value === -1 ? '-' : String(value);
+  }
+
+  function esc(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function edgeKey(from, to) {
+    return `${from}-${to}`;
+  }
+
+  function describeComparison(before, left, weight, candidate) {
+    return `<code>${fmt(before)} &gt; ${fmt(left)} + ${fmt(weight)} = ${fmt(candidate)}</code>`;
+  }
+
+  function changeSummary(changes) {
+    if (!changes.length) return '이번 루프에서 갱신된 셀이 없습니다.';
+    return changes.map((c) => `(${c.i}, ${c.j}) ${fmt(c.before)} → ${fmt(c.after)}`).join(', ');
+  }
+
+  function buildMatrixPath(prev, dist, from, to) {
+    if (!Number.isFinite(dist[from][to])) return [];
+    if (from === to) return [from];
+    const path = [to];
+    let cursor = to;
+    let guard = 0;
+    while (cursor !== from && guard <= V + 2) {
+      cursor = prev[from][cursor];
+      if (cursor === -1) return [];
+      path.push(cursor);
+      guard += 1;
+    }
+    return path.reverse();
+  }
+
+  function edgeKeysFromPath(path) {
+    const keys = [];
+    for (let i = 0; i < path.length - 1; i += 1) {
+      keys.push(edgeKey(path[i], path[i + 1]));
+    }
+    return keys;
+  }
+
+  function pathText(path, distValue) {
+    if (!Number.isFinite(distValue) || path.length === 0) return '경로 없음';
+    return path.join(' -> ');
+  }
+
+  function generateFloydSteps() {
+    let dist = cloneMatrix(graph);
+    let prev = initPrev(graph);
+    const result = [];
+
+    result.push({
+      kind: 'floyd',
+      type: 'init',
+      dist: cloneMatrix(dist),
+      prev: cloneMatrix(prev),
+      lines: [1, 2, 3, 4, 5],
+      desc: '초기화 단계입니다. dist는 graph를 복사하고, 직접 간선이 있는 칸의 prev는 출발 정점 i로 둡니다.',
+      formula: '자기 자신이거나 간선이 없으면 prev = -1, 직접 간선이 있으면 prev = i입니다.',
+      decision: '초기화'
+    });
+
+    for (let k = 0; k < V; k += 1) {
+      const baseDist = cloneMatrix(dist);
+      const basePrev = cloneMatrix(prev);
+      const workDist = cloneMatrix(dist);
+      const workPrev = cloneMatrix(prev);
+      const changes = [];
+
+      result.push({
+        kind: 'floyd',
+        type: 'loop-start',
+        k,
+        dist: cloneMatrix(workDist),
+        prev: cloneMatrix(workPrev),
+        lines: [6, 7, 8],
+        desc: `k = ${k} 루프를 시작합니다. 이 루프에서는 정점 ${k}를 새 경유 정점으로 허용합니다.`,
+        formula: '<code>dist[i][j] > dist[i][k] + dist[k][j]</code> 를 검사합니다.',
+        decision: `k = ${k}`
+      });
+
+      for (let i = 0; i < V; i += 1) {
+        for (let j = 0; j < V; j += 1) {
+          const before = baseDist[i][j];
+          const left = baseDist[i][k];
+          const right = baseDist[k][j];
+          const candidate = left + right;
+          const updated = before > candidate;
+          const candidatePath = buildMatrixPath(basePrev, baseDist, i, k).concat(buildMatrixPath(basePrev, baseDist, k, j).slice(1));
+          const candidateEdges = edgeKeysFromPath(candidatePath);
+
+          if (updated) {
+            workDist[i][j] = candidate;
+            workPrev[i][j] = basePrev[k][j];
+            const updatedPath = buildMatrixPath(workPrev, workDist, i, j);
+            changes.push({ i, j, before, after: candidate, path: updatedPath });
+          }
+
+          {
+            const afterPath = buildMatrixPath(workPrev, workDist, i, j);
+            result.push({
+              kind: 'floyd',
+              type: updated ? 'update' : 'compare',
+              k,
+              i,
+              j,
+              before,
+              left,
+              right,
+              candidate,
+              candidateEdges,
+              resultEdges: edgeKeysFromPath(afterPath),
+              dist: cloneMatrix(workDist),
+              prev: cloneMatrix(workPrev),
+              lines: updated ? [9, 10, 11, 12, 13] : [9, 10, 11],
+              desc: updated
+                ? `k = ${k}, i = ${i}, j = ${j}. 정점 ${k}를 거치면 더 짧아져 dist[${i}][${j}]를 갱신합니다.`
+                : `k = ${k}, i = ${i}, j = ${j}. 비교는 수행했지만 기존 dist[${i}][${j}]가 더 짧거나 같습니다.`,
+              formula: `${describeComparison(before, left, right, candidate)} ${updated ? '이므로 갱신합니다.' : '이 아니므로 유지합니다.'}`,
+              decision: updated ? `${fmt(before)} → ${fmt(candidate)}` : '유지'
+            });
+          }
+        }
+      }
+
+      dist = workDist;
+      prev = workPrev;
+      result.push({
+        kind: 'floyd',
+        type: 'loop-end',
+        k,
+        changes,
+        dist: cloneMatrix(dist),
+        prev: cloneMatrix(prev),
+        lines: [15, 16, 17],
+        desc: `k = ${k} 루프가 끝났습니다. dist_k와 prev_k를 dist, prev로 교체합니다.`,
+        formula: changeSummary(changes),
+        decision: changes.length ? `${changes.length}개 갱신` : '변경 없음'
+      });
+    }
+
+    result.push({
+      kind: 'floyd',
+      type: 'final',
+      dist: cloneMatrix(dist),
+      prev: cloneMatrix(prev),
+      lines: [17],
+      desc: '플로이드-워셜이 완료되었습니다. dist는 모든 쌍 최단 거리, prev는 경로 복원 정보를 담습니다.',
+      formula: '최종 prev 행렬로 모든 출발-도착 경로를 복원합니다.',
+      decision: '완료'
+    });
+
+    return result;
+  }
+
+  function generateBellmanSteps() {
+    let dist = cloneMatrix(graph);
+    let prev = initPrev(graph);
+    const result = [];
+
+    result.push({
+      kind: 'bellman',
+      type: 'init',
+      dist: cloneMatrix(dist),
+      prev: cloneMatrix(prev),
+      lines: [1, 2, 3, 4, 5],
+      desc: '초기화 단계입니다. dist는 graph를 복사하고 직접 간선의 prev는 출발 정점 i로 둡니다.',
+      formula: '반복 Bellman-Ford는 이후 시작 정점 s의 행만 완화합니다.',
+      decision: '초기화'
+    });
+
+    for (let s = 0; s < V; s += 1) {
+      result.push({
+        kind: 'bellman',
+        type: 'source-start',
+        s,
+        dist: cloneMatrix(dist),
+        prev: cloneMatrix(prev),
+        lines: [6],
+        desc: `시작 정점 s = ${s}를 고정합니다. 이제 dist[${s}] 행만 Bellman-Ford 방식으로 갱신합니다.`,
+        formula: '<code>dist[s][j] > dist[s][i] + graph[i][j]</code> 를 검사합니다.',
+        decision: `s = ${s}`
+      });
+
+      for (let pass = 1; pass < V; pass += 1) {
+        const baseDist = cloneMatrix(dist);
+        const basePrev = cloneMatrix(prev);
+        const workDist = cloneMatrix(dist);
+        const workPrev = cloneMatrix(prev);
+        const changes = [];
+
+        result.push({
+          kind: 'bellman',
+          type: 'pass-start',
+          s,
+          pass,
+          dist: cloneMatrix(workDist),
+          prev: cloneMatrix(workPrev),
+          lines: [7, 8, 9],
+          desc: `s = ${s}, pass = ${pass}를 시작합니다. pass 시작 시점의 dist와 prev를 복사해 작업본을 만듭니다.`,
+          formula: '코드와 동일하게 인접 행렬의 모든 i, j 칸을 순서대로 검사합니다.',
+          decision: `pass ${pass}`
+        });
+
+        for (let i = 0; i < V; i += 1) {
+          for (let j = 0; j < V; j += 1) {
+            const before = baseDist[s][j];
+            const left = baseDist[s][i];
+            const weight = graph[i][j];
+            const candidate = left + weight;
+            const hasVisibleEdge = i !== j && Number.isFinite(weight);
+            const updated = before > candidate;
+
+            if (updated) {
+              workDist[s][j] = candidate;
+              workPrev[s][j] = i;
+              const path = buildMatrixPath(workPrev, workDist, s, j);
+              changes.push({ i: s, j, before, after: candidate, edge: edgeKey(i, j), path });
+            }
+
+            {
+              const path = buildMatrixPath(workPrev, workDist, s, j);
+              result.push({
+                kind: 'bellman',
+                type: updated ? 'update' : 'compare',
+                s,
+                pass,
+                i,
+                j,
+                before,
+                left,
+                right: weight,
+                candidate,
+                activeEdges: hasVisibleEdge ? [edgeKey(i, j)] : [],
+                resultEdges: edgeKeysFromPath(path),
+                dist: cloneMatrix(workDist),
+                prev: cloneMatrix(workPrev),
+                lines: updated ? [10, 11, 12, 13, 14] : [10, 11, 12],
+                desc: updated
+                  ? `s = ${s}, pass = ${pass}. 간선 ${i} → ${j}를 사용하면 ${s}에서 ${j}까지 더 짧아집니다.`
+                  : `s = ${s}, pass = ${pass}. i = ${i}, j = ${j} 비교를 수행했지만 갱신하지 않습니다.`,
+                formula: `${describeComparison(before, left, weight, candidate)} ${updated ? '이므로 갱신합니다.' : '이 아니므로 유지합니다.'}`,
+                decision: updated ? `${fmt(before)} → ${fmt(candidate)}` : '유지'
+              });
+            }
+          }
+        }
+
+        dist = workDist;
+        prev = workPrev;
+        result.push({
+          kind: 'bellman',
+          type: 'pass-end',
+          s,
+          pass,
+          changes,
+          dist: cloneMatrix(dist),
+          prev: cloneMatrix(prev),
+          lines: [16, 17, 18],
+          desc: `s = ${s}, pass = ${pass}가 끝났습니다. 작업본을 실제 dist, prev로 교체합니다.`,
+          formula: changeSummary(changes),
+          decision: changes.length ? `${changes.length}개 갱신` : '변경 없음'
+        });
+      }
+    }
+
+    result.push({
+      kind: 'bellman',
+      type: 'final',
+      dist: cloneMatrix(dist),
+      prev: cloneMatrix(prev),
+      lines: [18],
+      desc: '반복 Bellman-Ford가 완료되었습니다. 각 시작 정점 행에 대해 최단 경로 정보가 계산되었습니다.',
+      formula: '최종 prev 행렬로 모든 출발-도착 경로를 복원합니다.',
+      decision: '완료'
+    });
+
+    return result;
+  }
+
+  function syntax(text) {
+    return esc(text)
+      .replace(/\b(vector|deque|numeric_limits)\b/g, '<span class="tp">$1</span>')
+      .replace(/\b(constexpr|double|int|void|auto|for|if|else|return|while|const)\b/g, '<span class="kw">$1</span>')
+      .replace(/\b(Print|PrintPaths|RepeatingBellmanFord|FloydWarshall|size|swap)\b/g, '<span class="fn">$1</span>')
+      .replace(/\b(dist_k|prev_k|dist|prev|graph|kInf|V|s|v|i|j|k|w)\b/g, '<span class="id">$1</span>')
+      .replace(/\b(-?\d+(\.\d+)?)\b/g, '<span class="num">$1</span>');
+  }
+
+  function renderCode(step) {
+    const config = configs[mode];
+    const active = new Set(step.lines || []);
+    refs.codeTitle.textContent = config.codeTitle;
+    refs.codeBody.innerHTML = config.codeLines.map((line, index) => {
+      const no = index + 1;
+      const cls = active.has(no) ? 'cline hl' : 'cline';
+      return `<div class="${cls}"><div class="lnum">${no}</div><div class="lcode" style="--indent:${line.indent || 0}">${syntax(line.text)}</div></div>`;
+    }).join('');
+  }
+
+  function normalize(dx, dy) {
+    const length = Math.hypot(dx, dy) || 1;
+    return { x: dx / length, y: dy / length };
+  }
+
+  function offsetPoint(point, direction, distance) {
+    return { x: point.x + direction.x * distance, y: point.y + direction.y * distance };
+  }
+
+  function edgeState(step, key) {
+    if (step.type === 'update' && step.i !== undefined && step.j !== undefined && edgeKey(step.i, step.j) === key && mode === 'bellman') return 'updated';
+    if ((step.activeEdges || []).includes(key)) return 'active';
+    if ((step.candidateEdges || []).includes(key)) return 'candidate';
+    if ((step.resultEdges || []).includes(key)) return 'result';
+    return '';
+  }
+
+  function edgeGeometry(edge) {
+    const startNode = positions[edge.from];
+    const endNode = positions[edge.to];
+    const curve = curves[edgeKey(edge.from, edge.to)] || null;
+    let start;
+    let end;
+    let tangent;
+    let label;
+    let d;
+
+    if (curve) {
+      const control = { x: curve.cx, y: curve.cy };
+      const startDir = normalize(control.x - startNode.x, control.y - startNode.y);
+      const endDir = normalize(endNode.x - control.x, endNode.y - control.y);
+      start = offsetPoint(startNode, startDir, NODE_RADIUS);
+      end = offsetPoint(endNode, endDir, -(NODE_RADIUS + 2));
+      tangent = { x: end.x - control.x, y: end.y - control.y };
+      label = {
+        x: 0.25 * start.x + 0.5 * control.x + 0.25 * end.x,
+        y: 0.25 * start.y + 0.5 * control.y + 0.25 * end.y
+      };
+      d = `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`;
+    } else {
+      const dir = normalize(endNode.x - startNode.x, endNode.y - startNode.y);
+      start = offsetPoint(startNode, dir, NODE_RADIUS);
+      end = offsetPoint(endNode, dir, -(NODE_RADIUS + 2));
+      tangent = { x: end.x - start.x, y: end.y - start.y };
+      const normal = { x: -dir.y, y: dir.x };
+      label = { x: (start.x + end.x) / 2 + normal.x * 12, y: (start.y + end.y) / 2 + normal.y * 12 };
+      d = `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+    }
+
+    const labelOffset = labelOffsets[edgeKey(edge.from, edge.to)] || { dx: 0, dy: 0 };
+    label.x += labelOffset.dx || 0;
+    label.y += labelOffset.dy || 0;
+    return { d, end, tangent, label };
+  }
+
+  function arrowPoints(end, tangent) {
+    const dir = normalize(tangent.x, tangent.y);
+    const normal = { x: -dir.y, y: dir.x };
+    const base = { x: end.x - dir.x * ARROW_LENGTH, y: end.y - dir.y * ARROW_LENGTH };
+    const left = { x: base.x + normal.x * ARROW_WIDTH * 0.5, y: base.y + normal.y * ARROW_WIDTH * 0.5 };
+    const right = { x: base.x - normal.x * ARROW_WIDTH * 0.5, y: base.y - normal.y * ARROW_WIDTH * 0.5 };
+    return `${end.x},${end.y} ${left.x},${left.y} ${right.x},${right.y}`;
+  }
+
+  function createSvg(tag, attrs) {
+    const el = document.createElementNS(SVG_NS, tag);
+    Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+    return el;
+  }
+
+  function roleAnchor(id) {
+    const anchors = {
+      0: { dx: 0, dy: -38 },
+      1: { dx: 42, dy: -12 },
+      2: { dx: 42, dy: 18 },
+      3: { dx: -42, dy: 18 },
+      4: { dx: -42, dy: -12 }
+    };
+    return anchors[id] || { dx: 0, dy: 38 };
+  }
+
+  function renderGraph(step) {
+    refs.edgeGroup.innerHTML = '';
+    refs.weightGroup.innerHTML = '';
+    refs.nodeGroup.innerHTML = '';
+
+    edges.forEach((edge) => {
+      const key = edgeKey(edge.from, edge.to);
+      const state = edgeState(step, key);
+      const geom = edgeGeometry(edge);
+      refs.edgeGroup.appendChild(createSvg('path', { d: geom.d, class: `edge-path ${state}` }));
+      refs.edgeGroup.appendChild(createSvg('polygon', { points: arrowPoints(geom.end, geom.tangent), class: `arrow-head ${state}` }));
+      const label = createSvg('text', { x: geom.label.x, y: geom.label.y, class: 'weight-label', 'text-anchor': 'middle' });
+      label.textContent = fmt(edge.weight);
+      refs.weightGroup.appendChild(label);
+    });
+
+    Object.keys(positions).map(Number).forEach((id) => {
+      const pos = positions[id];
+      const classes = ['node'];
+      const roles = [];
+      if (mode === 'floyd') {
+        if (step.k === id) { classes.push('pivot'); roles.push('k'); }
+        if (step.i === id) { classes.push('from'); roles.push('i'); }
+        if (step.j === id) { classes.push('to'); roles.push('j'); }
+      } else {
+        if (step.s === id) { classes.push('source'); roles.push('s'); }
+        if (step.i === id) { classes.push('from'); roles.push('i'); }
+        if (step.j === id) { classes.push('to'); roles.push('j'); }
+      }
+      const group = createSvg('g', { class: classes.join(' ') });
+      group.appendChild(createSvg('circle', { cx: pos.x, cy: pos.y, r: NODE_RADIUS, class: 'node-circle' }));
+      const label = createSvg('text', { x: pos.x, y: pos.y + 1, class: 'node-label' });
+      label.textContent = String(id);
+      group.appendChild(label);
+      if (roles.length) {
+        const anchor = roleAnchor(id);
+        const text = roles.join(', ');
+        const width = Math.max(22, 14 + text.length * 7);
+        group.appendChild(createSvg('rect', {
+          x: pos.x + anchor.dx - width / 2,
+          y: pos.y + anchor.dy - 9,
+          width,
+          height: 18,
+          rx: 5,
+          class: 'node-role-bg'
+        }));
+        const role = createSvg('text', { x: pos.x + anchor.dx, y: pos.y + anchor.dy + 1, class: 'node-role' });
+        role.textContent = text;
+        group.appendChild(role);
+      }
+      refs.nodeGroup.appendChild(group);
+    });
+  }
+
+  function renderEdgeList(step) {
+    refs.edgeList.innerHTML = edges.map((edge) => {
+      const state = edgeState(step, edgeKey(edge.from, edge.to));
+      return `<div class="edge-item ${state}"><div class="edge-no">#${edge.index + 1}</div><div class="edge-main">${edge.from} → ${edge.to}</div><div class="edge-sub">${fmt(edge.weight)}</div></div>`;
+    }).join('');
+  }
+
+  function cellClass(step, name, row, col, value) {
+    const classes = [];
+    if (name === 'dist' && row === col) classes.push('self');
+    if (name === 'dist' && !Number.isFinite(value)) classes.push('inf');
+    if (mode === 'floyd') {
+      if (step.i !== undefined && step.j !== undefined && step.k !== undefined) {
+        if (name === 'dist' && row === step.i && col === step.k) classes.push('from-cell');
+        if (name === 'dist' && row === step.k && col === step.j) classes.push('pivot-cell');
+        if (row === step.i && col === step.j) classes.push('to-cell');
+      }
+    } else {
+      if (step.s !== undefined && row === step.s) classes.push('row');
+      if (step.s !== undefined && step.i !== undefined && step.j !== undefined) {
+        if (name === 'dist' && row === step.s && col === step.i) classes.push('operand');
+        if (row === step.s && col === step.j) classes.push(step.type === 'update' ? 'updated' : 'target');
+      }
+    }
+    return classes.join(' ');
+  }
+
+  function renderMatrix(ref, matrix, name, step) {
+    let html = '<table class="matrix-table"><thead><tr><th></th>';
+    for (let j = 0; j < V; j += 1) html += `<th>${j}</th>`;
+    html += '</tr></thead><tbody>';
+    for (let i = 0; i < V; i += 1) {
+      html += `<tr><th>${i}</th>`;
+      for (let j = 0; j < V; j += 1) {
+        const value = matrix[i][j];
+        const text = name === 'dist' ? fmt(value) : prevText(value);
+        html += `<td class="${cellClass(step, name, i, j, value)}">${text}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    ref.innerHTML = html;
+  }
+
+  function renderMeta(step) {
+    if (mode === 'floyd') {
+      refs.metaAName.textContent = 'Algorithm';
+      refs.metaAVal.textContent = 'Floyd-Warshall';
+      refs.metaASub.textContent = 'all-pairs shortest paths';
+      refs.metaBName.textContent = 'k';
+      refs.metaBVal.textContent = step.k === undefined ? '-' : String(step.k);
+      refs.metaBSub.textContent = '현재 허용한 경유 정점';
+      refs.metaCName.textContent = 'Cell';
+      refs.metaCVal.textContent = step.i === undefined ? '-' : `${step.i}, ${step.j}`;
+      refs.metaCSub.textContent = step.i === undefined ? 'loop summary' : 'dist[i][j]';
+      refs.metaDName.textContent = 'Decision';
+      refs.metaDVal.textContent = step.decision || '-';
+      refs.metaDSub.textContent = 'copy-update result';
+    } else {
+      refs.metaAName.textContent = 'Source';
+      refs.metaAVal.textContent = step.s === undefined ? '-' : String(step.s);
+      refs.metaASub.textContent = '현재 시작 정점';
+      refs.metaBName.textContent = 'Pass';
+      refs.metaBVal.textContent = step.pass === undefined ? '-' : `${step.pass} / ${V - 1}`;
+      refs.metaBSub.textContent = 'Bellman-Ford 반복';
+      refs.metaCName.textContent = 'i, j';
+      refs.metaCVal.textContent = step.i === undefined ? '-' : `${step.i}, ${step.j}`;
+      refs.metaCSub.textContent = step.i === undefined ? 'pass summary' : 'graph[i][j] 검사';
+      refs.metaDName.textContent = 'Decision';
+      refs.metaDVal.textContent = step.decision || '-';
+      refs.metaDSub.textContent = 'relax result';
+    }
+  }
+
+  function renderPaths(step) {
+    if (step.type === 'final') {
+      const cards = [];
+      for (let s = 0; s < V; s += 1) {
+        for (let t = 0; t < V; t += 1) {
+          const path = buildMatrixPath(step.prev, step.dist, s, t);
+          cards.push(`<div class="path-card done"><div class="path-head">${s} → ${t} / dist ${fmt(step.dist[s][t])}</div><div class="path-body">${pathText(path, step.dist[s][t])}</div></div>`);
+        }
+      }
+      refs.paths.innerHTML = cards.join('');
+      return;
+    }
+
+    if (step.type === 'loop-end' || step.type === 'pass-end') {
+      if (!step.changes || !step.changes.length) {
+        refs.paths.innerHTML = '<div class="path-card"><div class="path-head">loop result</div><div class="path-body">갱신된 경로가 없습니다.</div></div>';
+        return;
+      }
+      refs.paths.innerHTML = step.changes.map((change) => (
+        `<div class="path-card update"><div class="path-head">${change.i} → ${change.j}</div><div class="path-body">${fmt(change.before)} → ${fmt(change.after)} / ${pathText(change.path, change.after)}</div></div>`
+      )).join('');
+      return;
+    }
+
+    if (step.i !== undefined && step.j !== undefined) {
+      const from = mode === 'bellman' ? step.s : step.i;
+      const to = step.j;
+      const path = buildMatrixPath(step.prev, step.dist, from, to);
+      const cards = [
+        `<div class="path-card focus"><div class="path-head">현재 대상 ${from} → ${to}</div><div class="path-body">${pathText(path, step.dist[from][to])} / dist ${fmt(step.dist[from][to])}</div></div>`
+      ];
+      if (mode === 'floyd' && step.k !== undefined) {
+        cards.push(`<div class="path-card"><div class="path-head">후보 경유</div><div class="path-body">${step.i} → ${step.k} → ${step.j}</div></div>`);
+      }
+      refs.paths.innerHTML = cards.join('');
+      return;
+    }
+
+    const source = mode === 'bellman' && step.s !== undefined ? step.s : 0;
+    refs.paths.innerHTML = Array.from({ length: V }, (_, target) => {
+      const path = buildMatrixPath(step.prev, step.dist, source, target);
+      return `<div class="path-card"><div class="path-head">${source} → ${target}</div><div class="path-body">${pathText(path, step.dist[source][target])}</div></div>`;
+    }).join('');
+  }
+
+  function renderLegend() {
+    const items = [
+      { label: '경유/source', fill: 'rgba(86,156,214,.16)', stroke: '#569cd6' },
+      { label: '현재 i 또는 간선', fill: 'rgba(247,178,103,.16)', stroke: '#f7b267' },
+      { label: '목표 j / 갱신', fill: 'rgba(197,134,192,.18)', stroke: '#c586c0' },
+      { label: '후보 경로', fill: 'rgba(220,220,170,.14)', stroke: '#dcdcaa' },
+      { label: '복원 경로', fill: 'rgba(78,201,176,.16)', stroke: '#4ec9b0' }
+    ];
+    refs.legend.innerHTML = items.map((item) => `<div class="leg"><div class="leg-c" style="background:${item.fill};border-color:${item.stroke}"></div>${item.label}</div>`).join('');
+  }
+
+  function renderTabs() {
+    refs.tabs.innerHTML = Object.keys(configs).map((key) => (
+      `<button class="tab-btn ${mode === key ? 'active' : ''}" data-mode="${key}" type="button">${configs[key].label}</button>`
+    )).join('');
+    refs.tabs.querySelectorAll('button').forEach((button) => {
+      button.addEventListener('click', () => {
+        stopAuto();
+        mode = button.dataset.mode;
+        steps = stepsByMode[mode];
+        current = 0;
+        renderTabs();
+        renderStep();
+      });
+    });
+  }
+
+  function renderStep() {
+    const step = steps[current];
+    refs.counter.textContent = `Step ${current + 1} / ${steps.length}`;
+    refs.desc.innerHTML = `<div class="desc-main">${esc(step.desc)}</div><div class="desc-formula">${step.formula}</div>`;
+    refs.formula.innerHTML = step.formula;
+    refs.graphNote.textContent = configs[mode].graphNote;
+    renderMeta(step);
+    renderGraph(step);
+    renderEdgeList(step);
+    renderMatrix(refs.distMatrix, step.dist, 'dist', step);
+    renderMatrix(refs.prevMatrix, step.prev, 'prev', step);
+    renderPaths(step);
+    renderCode(step);
+    refs.progress.style.width = `${steps.length <= 1 ? 100 : (current / (steps.length - 1)) * 100}%`;
+    refs.prev.disabled = current === 0;
+    refs.reset.disabled = current === 0;
+    refs.next.disabled = current === steps.length - 1;
+    refs.last.disabled = current === steps.length - 1;
+    refs.auto.textContent = timer ? 'Pause' : 'Play';
+  }
+
+  function setStep(index) {
+    current = Math.max(0, Math.min(steps.length - 1, index));
+    renderStep();
+  }
+
+  function stopAuto() {
+    if (!timer) return;
+    window.clearInterval(timer);
+    timer = null;
+    renderStep();
+  }
+
+  function toggleAuto() {
+    if (timer) {
+      stopAuto();
+      return;
+    }
+    timer = window.setInterval(() => {
+      if (current >= steps.length - 1) {
+        stopAuto();
+        return;
+      }
+      setStep(current + 1);
+    }, 900);
+    renderStep();
+  }
+
+  function bindControls() {
+    refs.prev.addEventListener('click', () => setStep(current - 1));
+    refs.next.addEventListener('click', () => setStep(current + 1));
+    refs.reset.addEventListener('click', () => setStep(0));
+    refs.last.addEventListener('click', () => setStep(steps.length - 1));
+    refs.auto.addEventListener('click', toggleAuto);
+    document.addEventListener('keydown', (event) => {
+      if (event.defaultPrevented || event.altKey || event.metaKey) return;
+      const tag = (event.target && event.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target.isContentEditable) return;
+      if (event.key === 'End') {
+        setStep(steps.length - 1);
+        event.preventDefault();
+      }
+      if (event.key === 'PageDown') {
+        setStep(current + 1);
+        event.preventDefault();
+      }
+      if (event.key === 'PageUp') {
+        setStep(current - 1);
+        event.preventDefault();
+      }
+    });
+  }
+
+  function init() {
+    stepsByMode = {
+      floyd: generateFloydSteps(),
+      bellman: generateBellmanSteps()
+    };
+    steps = stepsByMode[mode];
+    renderLegend();
+    renderTabs();
+    bindControls();
+    renderStep();
+  }
+
+  init();
+})();
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>
