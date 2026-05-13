@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Largest Independent Set / 최대 독립 집합</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:16px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
+.sub{max-width:1220px;color:#c9c9c9;line-height:1.65;margin-bottom:10px}
+#tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tab-btn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:7px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px}
+.tab-btn.active{background:rgba(247,178,103,.18);border-color:#f7b267;color:#ffd8aa}
+#step-counter{font-size:11px;color:#858585;margin-top:8px}
+#step-desc{margin-top:5px;padding:10px 12px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0;line-height:1.65;min-height:68px;display:flex;flex-direction:column;gap:6px}
+.desc-main{font-size:13px;color:#e0e0e0}
+.desc-formula{font-size:12px;color:#dcdcaa;word-break:break-word}
+.desc-formula code{font-family:inherit;color:#9cdcfe}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#layout{display:grid;grid-template-columns:minmax(520px,1.2fr) minmax(360px,.8fr);gap:14px;margin:12px 0;align-items:start}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#tree-wrap{overflow:auto}
+#tree-svg{display:block;width:100%;min-width:680px;height:470px;background:#1f1f1f;border:1px solid #343434;border-radius:6px}
+.edge{stroke:#5a5a5a;stroke-width:2}
+.node circle{fill:#252526;stroke:#6a6a6a;stroke-width:2}
+.node text{fill:#d4d4d4;font-weight:700;font-size:14px;text-anchor:middle;dominant-baseline:middle}
+.node.candidate circle{stroke:#4ec9b0;fill:rgba(78,201,176,.22)}
+.node.blocked circle{stroke:#c586c0;fill:rgba(197,134,192,.18)}
+.node.memo circle{stroke:#569cd6}
+.node.current circle{stroke:#f7b267;fill:rgba(247,178,103,.22)}
+.memo-label{fill:#9cdcfe;font-size:10px;text-anchor:middle}
+.side-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.case-list,.trace-list,.stack-list{display:flex;flex-direction:column;gap:7px;max-height:360px;overflow:auto;padding-right:2px}
+.case-row,.trace-line,.frame{background:#1f1f1f;border:1px solid #343434;border-radius:5px;padding:7px 8px;font-size:12px;line-height:1.45;color:#d4d4d4}
+.case-row.active,.trace-line.current,.frame.current{border-color:#f7b267;background:rgba(247,178,103,.1)}
+.case-row.win{border-color:#4ec9b0;background:rgba(78,201,176,.1)}
+.case-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.case-main{font-size:13px;color:#dcdcaa;font-weight:700}
+.case-sub{font-size:11px;color:#9cdcfe}
+.frame{display:grid;grid-template-columns:48px 1fr auto;gap:8px;align-items:center}
+.frame-id{font-size:10px;color:#858585}
+.frame-main{font-size:12px;color:#d4d4d4}
+.frame-sub{font-size:11px;color:#9cdcfe}
+.memo-table{border-collapse:separate;border-spacing:2px;width:100%;table-layout:fixed}
+.memo-table th,.memo-table td{height:30px;text-align:center;border-radius:4px;padding:0 6px;white-space:nowrap}
+.memo-table th{color:#858585;font-size:10px;font-weight:400}
+.memo-table td{border:1px solid #343434;background:#1f1f1f;color:#d4d4d4;font-weight:700}
+.memo-table td.filled{border-color:#569cd6;color:#9cdcfe;background:rgba(86,156,214,.12)}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin:12px 0}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;overflow-x:auto}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.id{color:#9cdcfe}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px 0 16px}
+.progress{width:min(100%,640px);height:8px;border-radius:999px;border:1px solid #3e3e42;background:#2d2d2d;overflow:hidden}
+.progress-bar{height:100%;width:0;background:#569cd6}
+.button-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;min-width:70px;min-height:34px;padding:7px 14px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#343434}
+.nbtn:disabled{opacity:.35;cursor:default}
+#viewer-hotkeys{display:none!important}
+@media (max-width:980px){#layout{grid-template-columns:1fr}}
+@media (max-width:720px){body{padding:12px}#tree-svg{min-width:620px;height:430px}.nbtn{flex:1 1 88px}h1{font-size:18px;line-height:1.35}}
+</style>
+</head>
+<body>
+<h1>Largest Independent Set / 최대 독립 집합</h1>
+<p class="sub">트리에서 서로 부모-자식 관계가 아닌 노드들을 최대한 많이 선택하는 문제입니다. 이 예제는 제공하신 이진 트리에서 <code>MemoLIS</code>와 <code>RecurLIS</code>를 비교하며, root를 제외하는 경우와 포함하는 경우를 단계별로 보여줍니다.</p>
+
+<div id="tabs"></div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend"></div>
+
+<div id="layout">
+  <div class="sbox">
+    <div class="slabel">Tree / 입력 트리</div>
+    <div id="tree-wrap"><svg id="tree-svg" viewBox="0 0 760 470" role="img" aria-label="Largest independent set tree"></svg></div>
+  </div>
+  <div class="side-grid">
+    <div class="sbox">
+      <div class="slabel">Case Values / case1, case2</div>
+      <div id="case-view"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">Memo Table / 메모 테이블</div>
+      <div id="memo-view"></div>
+    </div>
+  </div>
+</div>
+
+<div class="sbox">
+  <div class="slabel">Call Stack & Trace / 호출 스택과 흐름</div>
+  <div id="trace-view"></div>
+</div>
+
+<div id="code-panel">
+  <div id="code-title"></div>
+  <div id="code-body"></div>
+</div>
+
+<div id="nav">
+  <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="button-row">
+    <button class="nbtn" id="reset" type="button">Home</button>
+    <button class="nbtn" id="prev" type="button">Prev</button>
+    <button class="nbtn" id="auto-btn" type="button">Play</button>
+    <button class="nbtn" id="next" type="button">Next</button>
+    <button class="nbtn" id="last" type="button">End</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const nodes = {
+    1: { id: 1, left: 2, right: 3, x: 380, y: 44 },
+    2: { id: 2, left: 4, right: 5, x: 230, y: 145 },
+    3: { id: 3, left: null, right: 6, x: 540, y: 145 },
+    4: { id: 4, left: null, right: null, x: 145, y: 265 },
+    5: { id: 5, left: 7, right: 8, x: 315, y: 265 },
+    6: { id: 6, left: null, right: null, x: 620, y: 265 },
+    7: { id: 7, left: null, right: null, x: 260, y: 390 },
+    8: { id: 8, left: null, right: null, x: 370, y: 390 }
+  };
+  const order = [1, 2, 3, 4, 5, 6, 7, 8];
+  const modes = ['memo', 'recur'];
+  let mode = 'memo';
+  let current = 0;
+  let timer = null;
+
+  const refs = {
+    tabs: document.getElementById('tabs'),
+    counter: document.getElementById('step-counter'),
+    desc: document.getElementById('step-desc'),
+    legend: document.getElementById('legend'),
+    tree: document.getElementById('tree-svg'),
+    cases: document.getElementById('case-view'),
+    memo: document.getElementById('memo-view'),
+    trace: document.getElementById('trace-view'),
+    codeTitle: document.getElementById('code-title'),
+    codeBody: document.getElementById('code-body'),
+    progress: document.getElementById('progress-bar'),
+    reset: document.getElementById('reset'),
+    prev: document.getElementById('prev'),
+    next: document.getElementById('next'),
+    last: document.getElementById('last'),
+    auto: document.getElementById('auto-btn')
+  };
+
+  const code = {
+    memo: {
+      title: 'int MemoLIS(Node* root)',
+      lines: [
+        { indent: 0, text: 'int MemoLIS(Node* root)' },
+        { indent: 0, text: '{' },
+        { indent: 1, text: 'if (root == nullptr) return 0;' },
+        { indent: 1, text: 'if (root->memo != 0) return root->memo;' },
+        { indent: 1, text: 'int case1 = MemoLIS(root->left) + MemoLIS(root->right);' },
+        { indent: 1, text: 'int case2 = 1;' },
+        { indent: 1, text: 'if (root->left)' },
+        { indent: 2, text: 'case2 += MemoLIS(root->left->left) + MemoLIS(root->left->right);' },
+        { indent: 1, text: 'if (root->right)' },
+        { indent: 2, text: 'case2 += MemoLIS(root->right->left) + MemoLIS(root->right->right);' },
+        { indent: 1, text: 'root->memo = max(case1, case2);' },
+        { indent: 1, text: 'return root->memo;' },
+        { indent: 0, text: '}' }
+      ]
+    },
+    recur: {
+      title: 'int RecurLIS(Node* root)',
+      lines: [
+        { indent: 0, text: 'int RecurLIS(Node* root)' },
+        { indent: 0, text: '{' },
+        { indent: 1, text: 'if (root == nullptr) return 0;' },
+        { indent: 1, text: 'int case1 = RecurLIS(root->left) + RecurLIS(root->right);' },
+        { indent: 1, text: 'int case2 = 1;' },
+        { indent: 1, text: 'if (root->left)' },
+        { indent: 2, text: 'case2 += RecurLIS(root->left->left) + RecurLIS(root->left->right);' },
+        { indent: 1, text: 'if (root->right)' },
+        { indent: 2, text: 'case2 += RecurLIS(root->right->left) + RecurLIS(root->right->right);' },
+        { indent: 1, text: 'return max(case1, case2);' },
+        { indent: 0, text: '}' }
+      ]
+    }
+  };
+
+  function esc(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  function childIds(id) {
+    const node = nodes[id];
+    return node ? [node.left, node.right].filter(Boolean) : [];
+  }
+
+  function grandChildIds(id) {
+    return childIds(id).flatMap(childIds);
+  }
+
+  function mergeResults(...results) {
+    const set = [];
+    let size = 0;
+    results.forEach((result) => {
+      size += result.size;
+      set.push(...result.set);
+    });
+    return { size, set: Array.from(new Set(set)) };
+  }
+
+  function makeSteps(useMemo) {
+    const steps = [];
+    const stack = [];
+    const trace = [];
+    const memo = {};
+    let callId = 1;
+
+    function addTrace(text) {
+      trace.push(text);
+      if (trace.length > 12) trace.shift();
+    }
+
+    function memoSnapshot() {
+      const out = {};
+      order.forEach((id) => {
+        if (memo[id]) out[id] = memo[id].size;
+      });
+      return out;
+    }
+
+    function push(data) {
+      steps.push({
+        mode: useMemo ? 'memo' : 'recur',
+        stack: stack.map((frame) => ({ ...frame })),
+        trace: trace.slice(),
+        memo: memoSnapshot(),
+        ...data
+      });
+    }
+
+    function lis(id, branch = 'root') {
+      if (!id) return { size: 0, set: [] };
+      const currentCall = callId;
+      callId += 1;
+      stack.push({ callId: currentCall, node: id, branch, phase: 'enter' });
+      addTrace(`#${currentCall} Node ${id} 호출`);
+      push({
+        node: id, phase: 'enter', lines: [1, 2],
+        desc: `Node ${id}에서 최대 독립 집합 크기를 계산합니다.`,
+        formula: `<code>${useMemo ? 'MemoLIS' : 'RecurLIS'}(Node ${id})</code>`,
+        decision: '호출 진입',
+        candidate: [], blocked: []
+      });
+
+      if (useMemo && memo[id]) {
+        stack[stack.length - 1].phase = 'memo-hit';
+        addTrace(`#${currentCall} Node ${id} memo hit → ${memo[id].size}`);
+        push({
+          node: id, phase: 'memo-hit', lines: [4],
+          desc: `Node ${id}의 memo 값이 이미 있으므로 재귀를 더 내려가지 않고 ${memo[id].size}를 바로 반환합니다.`,
+          formula: `<code>return root->memo</code>`,
+          decision: 'memo 사용',
+          result: memo[id],
+          candidate: memo[id].set,
+          blocked: []
+        });
+        stack.pop();
+        return memo[id];
+      }
+
+      const left = nodes[id].left;
+      const right = nodes[id].right;
+      stack[stack.length - 1].phase = 'case1';
+      const case1 = mergeResults(lis(left, 'left child'), lis(right, 'right child'));
+      addTrace(`#${currentCall} Node ${id} case1 = ${case1.size}`);
+      push({
+        node: id, phase: 'case1', lines: useMemo ? [5] : [4],
+        desc: `Node ${id}를 포함하지 않는 경우입니다. 자식들의 결과를 더합니다.`,
+        formula: `<code>case1 = LIS(left) + LIS(right) = ${case1.size}</code>`,
+        decision: 'root 제외',
+        case1,
+        candidate: case1.set,
+        blocked: [id]
+      });
+
+      stack[stack.length - 1].phase = 'case2';
+      const grandResults = grandChildIds(id).map((grandId) => lis(grandId, 'grandchild'));
+      const case2 = mergeResults({ size: 1, set: [id] }, ...grandResults);
+      addTrace(`#${currentCall} Node ${id} case2 = ${case2.size}`);
+      push({
+        node: id, phase: 'case2', lines: useMemo ? [6, 7, 8, 9, 10] : [5, 6, 7, 8, 9],
+        desc: `Node ${id}를 포함하는 경우입니다. 자식은 선택하지 않고 손자들의 결과만 더합니다.`,
+        formula: `<code>case2 = 1 + LIS(grandchildren) = ${case2.size}</code>`,
+        decision: 'root 포함',
+        case1,
+        case2,
+        candidate: case2.set,
+        blocked: childIds(id)
+      });
+
+      const result = case1.size >= case2.size ? case1 : case2;
+      if (useMemo) memo[id] = result;
+      stack[stack.length - 1].phase = 'return';
+      addTrace(`#${currentCall} Node ${id} max(${case1.size}, ${case2.size}) → ${result.size}`);
+      push({
+        node: id, phase: 'return', lines: useMemo ? [11, 12] : [10],
+        desc: `Node ${id}에서 case1=${case1.size}, case2=${case2.size} 중 더 큰 값을 반환합니다.`,
+        formula: `<code>max(${case1.size}, ${case2.size}) = ${result.size}</code>`,
+        decision: useMemo ? 'memo 저장 후 반환' : '반환',
+        case1,
+        case2,
+        result,
+        candidate: result.set,
+        blocked: []
+      });
+      stack.pop();
+      return result;
+    }
+
+    const result = lis(1);
+    push({
+      node: 1, phase: 'done', lines: [],
+      desc: `${useMemo ? 'MemoLIS' : 'RecurLIS'} 계산이 완료되었습니다. 최대 독립 집합 크기는 ${result.size}입니다.`,
+      formula: `<code>return ${result.size}</code>`,
+      decision: '완료',
+      result,
+      candidate: result.set,
+      blocked: []
+    });
+    return steps;
+  }
+
+  const stepsByMode = {
+    memo: makeSteps(true),
+    recur: makeSteps(false)
+  };
+  let steps = stepsByMode[mode];
+
+  function renderTree(step) {
+    const candidate = new Set(step.candidate || []);
+    const blocked = new Set(step.blocked || []);
+    const memo = step.memo || {};
+    let html = '';
+    order.forEach((id) => {
+      const node = nodes[id];
+      childIds(id).forEach((childId) => {
+        const child = nodes[childId];
+        html += `<line class="edge" x1="${node.x}" y1="${node.y}" x2="${child.x}" y2="${child.y}"></line>`;
+      });
+    });
+    order.forEach((id) => {
+      const node = nodes[id];
+      const classes = ['node'];
+      if (step.node === id) classes.push('current');
+      if (candidate.has(id)) classes.push('candidate');
+      if (blocked.has(id)) classes.push('blocked');
+      if (memo[id]) classes.push('memo');
+      html += `<g class="${classes.join(' ')}" transform="translate(${node.x},${node.y})">
+        <circle r="24"></circle>
+        <text y="1">${id}</text>
+        ${memo[id] ? `<text class="memo-label" y="39">memo ${memo[id]}</text>` : ''}
+      </g>`;
+    });
+    refs.tree.innerHTML = html;
+  }
+
+  function renderCases(step) {
+    const case1 = step.case1;
+    const case2 = step.case2;
+    const result = step.result;
+    refs.cases.innerHTML = `<div class="case-list">
+      <div class="case-row ${step.phase === 'case1' ? 'active' : ''} ${result && case1 && result.size === case1.size ? 'win' : ''}">
+        <div class="case-name">case1 / root 제외</div>
+        <div class="case-main">${case1 ? case1.size : '-'}</div>
+        <div class="case-sub">${case1 ? `{${case1.set.join(', ')}}` : '자식들을 선택 가능'}</div>
+      </div>
+      <div class="case-row ${step.phase === 'case2' ? 'active' : ''} ${result && case2 && result.size === case2.size ? 'win' : ''}">
+        <div class="case-name">case2 / root 포함</div>
+        <div class="case-main">${case2 ? case2.size : '-'}</div>
+        <div class="case-sub">${case2 ? `{${case2.set.join(', ')}}` : '자식은 제외하고 손자들을 선택'}</div>
+      </div>
+    </div>`;
+  }
+
+  function renderMemo(step) {
+    const memo = step.memo || {};
+    let html = '<table class="memo-table"><thead><tr>';
+    order.forEach((id) => { html += `<th>${id}</th>`; });
+    html += '</tr></thead><tbody><tr>';
+    order.forEach((id) => {
+      html += `<td class="${memo[id] ? 'filled' : ''}">${memo[id] || '-'}</td>`;
+    });
+    html += '</tr></tbody></table>';
+    refs.memo.innerHTML = html;
+  }
+
+  function renderTrace(step) {
+    const stack = step.stack || [];
+    const stackHtml = stack.length
+      ? `<div class="stack-list">${stack.map((frame, index) => `<div class="frame ${index === stack.length - 1 ? 'current' : ''}">
+        <div class="frame-id">#${frame.callId}</div>
+        <div class="frame-main">Node ${frame.node}</div>
+        <div class="frame-sub">${esc(frame.phase)}</div>
+      </div>`).join('')}</div>`
+      : '<div class="trace-line">호출 스택이 비어 있습니다.</div>';
+    const traceHtml = `<div class="trace-list">${(step.trace || []).map((line, index, arr) => `<div class="trace-line ${index === arr.length - 1 ? 'current' : ''}">${esc(line)}</div>`).join('')}</div>`;
+    refs.trace.innerHTML = `<div style="display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:10px"><div>${stackHtml}</div><div>${traceHtml}</div></div>`;
+  }
+
+  function syntax(line) {
+    return esc(line)
+      .replace(/\b(int|return|if|else|nullptr|struct|public)\b/g, '<span class="kw">$1</span>')
+      .replace(/\b(MemoLIS|RecurLIS|max)\b/g, '<span class="fn">$1</span>')
+      .replace(/\b(root|memo|case1|case2|left|right)\b/g, '<span class="id">$1</span>')
+      .replace(/\b\d+\b/g, '<span class="num">$&</span>')
+      .replace(/\/\/.*/g, '<span class="cm">$&</span>');
+  }
+
+  function renderCode(step) {
+    const active = new Set(step.lines || []);
+    refs.codeTitle.textContent = code[mode].title;
+    refs.codeBody.innerHTML = code[mode].lines.map((line, index) => {
+      const no = index + 1;
+      return `<div class="cline ${active.has(no) ? 'hl' : ''}">
+        <div class="lnum">${no}</div>
+        <div class="lcode" style="--indent:${line.indent}">${syntax(line.text)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderLegend() {
+    const items = [
+      { label: '현재 root', fill: 'rgba(247,178,103,.16)', stroke: '#f7b267' },
+      { label: '선택 후보', fill: 'rgba(78,201,176,.16)', stroke: '#4ec9b0' },
+      { label: 'root 포함 시 제외되는 자식', fill: 'rgba(197,134,192,.18)', stroke: '#c586c0' },
+      { label: 'memo 저장됨', fill: 'rgba(86,156,214,.12)', stroke: '#569cd6' }
+    ];
+    refs.legend.innerHTML = items.map((item) => `<div class="leg"><div class="leg-c" style="background:${item.fill};border-color:${item.stroke}"></div>${item.label}</div>`).join('');
+  }
+
+  function renderTabs() {
+    refs.tabs.innerHTML = [
+      `<button class="tab-btn ${mode === 'memo' ? 'active' : ''}" data-mode="memo" type="button">MemoLIS / 메모이제이션</button>`,
+      `<button class="tab-btn ${mode === 'recur' ? 'active' : ''}" data-mode="recur" type="button">RecurLIS / 순수 재귀</button>`
+    ].join('');
+    refs.tabs.querySelectorAll('button').forEach((button) => {
+      button.addEventListener('click', () => {
+        stopAuto();
+        mode = button.dataset.mode;
+        steps = stepsByMode[mode];
+        current = 0;
+        renderTabs();
+        renderStep();
+      });
+    });
+  }
+
+  function renderStep() {
+    const step = steps[current];
+    refs.counter.textContent = `Step ${current + 1} / ${steps.length}`;
+    refs.desc.innerHTML = `<div class="desc-main">${esc(step.desc)}</div><div class="desc-formula">${step.formula}</div>`;
+    renderTree(step);
+    renderCases(step);
+    renderMemo(step);
+    renderTrace(step);
+    renderCode(step);
+    refs.progress.style.width = `${steps.length <= 1 ? 100 : (current / (steps.length - 1)) * 100}%`;
+    refs.prev.disabled = current === 0;
+    refs.reset.disabled = current === 0;
+    refs.next.disabled = current === steps.length - 1;
+    refs.last.disabled = current === steps.length - 1;
+  }
+
+  function setStep(index) {
+    current = Math.max(0, Math.min(steps.length - 1, index));
+    renderStep();
+  }
+
+  function stopAuto() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    refs.auto.textContent = 'Play';
+  }
+
+  function toggleAuto() {
+    if (timer) {
+      stopAuto();
+      return;
+    }
+    refs.auto.textContent = 'Pause';
+    timer = setInterval(() => {
+      if (current >= steps.length - 1) {
+        stopAuto();
+        return;
+      }
+      setStep(current + 1);
+    }, 550);
+  }
+
+  refs.reset.addEventListener('click', () => setStep(0));
+  refs.prev.addEventListener('click', () => setStep(current - 1));
+  refs.next.addEventListener('click', () => setStep(current + 1));
+  refs.last.addEventListener('click', () => setStep(steps.length - 1));
+  refs.auto.addEventListener('click', toggleAuto);
+  document.addEventListener('keydown', (event) => {
+    if (event.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+    if (event.code === 'ArrowRight') setStep(current + 1);
+    if (event.code === 'ArrowLeft') setStep(current - 1);
+    if (event.code === 'Home') setStep(0);
+    if (event.code === 'End') setStep(steps.length - 1);
+    if (event.code === 'Space') {
+      event.preventDefault();
+      toggleAuto();
+    }
+  });
+
+  renderLegend();
+  renderTabs();
+  renderStep();
+})();
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>
