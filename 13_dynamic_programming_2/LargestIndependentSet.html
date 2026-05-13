@@ -248,11 +248,25 @@ h1{font-size:16px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
     }
 
     function lis(id, branch = 'root') {
-      if (!id) return { size: 0, set: [] };
       const currentCall = callId;
       callId += 1;
       stack.push({ callId: currentCall, node: id, branch, phase: 'enter' });
-      addTrace(`#${currentCall} Node ${id} 호출`);
+      addTrace(`#${currentCall} ${id ? `Node ${id}` : 'nullptr'} 호출`);
+
+      if (!id) {
+        push({
+          node: null, phase: 'base-null', lines: [3],
+          desc: 'root가 nullptr이면 선택할 노드가 없으므로 0을 반환합니다.',
+          formula: '<code>if (root == nullptr) return 0</code>',
+          decision: 'base case',
+          result: { size: 0, set: [] },
+          candidate: [],
+          blocked: []
+        });
+        stack.pop();
+        return { size: 0, set: [] };
+      }
+
       push({
         node: id, phase: 'enter', lines: [1, 2],
         desc: `Node ${id}에서 최대 독립 집합 크기를 계산합니다.`,
@@ -280,27 +294,136 @@ h1{font-size:16px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
       const left = nodes[id].left;
       const right = nodes[id].right;
       stack[stack.length - 1].phase = 'case1';
-      const case1 = mergeResults(lis(left, 'left child'), lis(right, 'right child'));
+      let case1 = { size: 0, set: [] };
+      push({
+        node: id, phase: 'case1-start', lines: useMemo ? [5] : [4],
+        desc: `Node ${id}를 포함하지 않는 case1 계산을 시작합니다. case1은 왼쪽 자식과 오른쪽 자식의 LIS 합입니다.`,
+        formula: '<code>case1 = LIS(root->left) + LIS(root->right)</code>',
+        decision: 'case1 시작',
+        case1,
+        candidate: [],
+        blocked: [id]
+      });
+
+      push({
+        node: left || id, phase: 'case1-left-call', lines: useMemo ? [5] : [4],
+        desc: `case1의 첫 번째 항으로 왼쪽 자식 ${left ? `Node ${left}` : 'nullptr'}의 LIS를 계산합니다.`,
+        formula: `<code>leftPart = LIS(${left ? `Node ${left}` : 'nullptr'})</code>`,
+        decision: 'case1 왼쪽 호출',
+        case1,
+        candidate: [],
+        blocked: [id]
+      });
+      const leftResult = lis(left, 'case1 left');
+      case1 = mergeResults(case1, leftResult);
+      push({
+        node: id, phase: 'case1-left-done', lines: useMemo ? [5] : [4],
+        desc: `왼쪽 결과 ${leftResult.size}를 case1에 더했습니다. 현재 case1=${case1.size}입니다.`,
+        formula: `<code>case1 = ${case1.size}</code>`,
+        decision: 'case1 왼쪽 완료',
+        case1,
+        candidate: case1.set,
+        blocked: [id]
+      });
+
+      push({
+        node: right || id, phase: 'case1-right-call', lines: useMemo ? [5] : [4],
+        desc: `case1의 두 번째 항으로 오른쪽 자식 ${right ? `Node ${right}` : 'nullptr'}의 LIS를 계산합니다.`,
+        formula: `<code>rightPart = LIS(${right ? `Node ${right}` : 'nullptr'})</code>`,
+        decision: 'case1 오른쪽 호출',
+        case1,
+        candidate: case1.set,
+        blocked: [id]
+      });
+      const rightResult = lis(right, 'case1 right');
+      case1 = mergeResults(case1, rightResult);
       addTrace(`#${currentCall} Node ${id} case1 = ${case1.size}`);
       push({
-        node: id, phase: 'case1', lines: useMemo ? [5] : [4],
-        desc: `Node ${id}를 포함하지 않는 경우입니다. 자식들의 결과를 더합니다.`,
-        formula: `<code>case1 = LIS(left) + LIS(right) = ${case1.size}</code>`,
-        decision: 'root 제외',
+        node: id, phase: 'case1-done', lines: useMemo ? [5] : [4],
+        desc: `오른쪽 결과 ${rightResult.size}까지 더해 case1 계산이 끝났습니다. case1=${case1.size}입니다.`,
+        formula: `<code>case1 = ${leftResult.size} + ${rightResult.size} = ${case1.size}</code>`,
+        decision: 'case1 완료',
         case1,
         candidate: case1.set,
         blocked: [id]
       });
 
       stack[stack.length - 1].phase = 'case2';
-      const grandResults = grandChildIds(id).map((grandId) => lis(grandId, 'grandchild'));
-      const case2 = mergeResults({ size: 1, set: [id] }, ...grandResults);
+      let case2 = { size: 1, set: [id] };
+      push({
+        node: id, phase: 'case2-start', lines: useMemo ? [6] : [5],
+        desc: `Node ${id}를 포함하는 case2 계산을 시작합니다. root를 포함하므로 먼저 1을 더하고, 자식들은 선택하지 않습니다.`,
+        formula: '<code>case2 = 1</code>',
+        decision: 'case2 시작',
+        case1,
+        case2,
+        candidate: case2.set,
+        blocked: childIds(id)
+      });
+
+      const grandCalls = [];
+      if (left) {
+        grandCalls.push({ id: nodes[left].left, label: `left->left`, lines: useMemo ? [7, 8] : [6, 7] });
+        grandCalls.push({ id: nodes[left].right, label: `left->right`, lines: useMemo ? [7, 8] : [6, 7] });
+      } else {
+        push({
+          node: id, phase: 'case2-left-missing', lines: useMemo ? [7] : [6],
+          desc: '왼쪽 자식이 없으므로 왼쪽 자식의 손자 항은 없습니다.',
+          formula: '<code>if (root->left) ...</code>',
+          decision: '왼쪽 손자 없음',
+          case1,
+          case2,
+          candidate: case2.set,
+          blocked: childIds(id)
+        });
+      }
+      if (right) {
+        grandCalls.push({ id: nodes[right].left, label: `right->left`, lines: useMemo ? [9, 10] : [8, 9] });
+        grandCalls.push({ id: nodes[right].right, label: `right->right`, lines: useMemo ? [9, 10] : [8, 9] });
+      } else {
+        push({
+          node: id, phase: 'case2-right-missing', lines: useMemo ? [9] : [8],
+          desc: '오른쪽 자식이 없으므로 오른쪽 자식의 손자 항은 없습니다.',
+          formula: '<code>if (root->right) ...</code>',
+          decision: '오른쪽 손자 없음',
+          case1,
+          case2,
+          candidate: case2.set,
+          blocked: childIds(id)
+        });
+      }
+
+      grandCalls.forEach((grand) => {
+        push({
+          node: grand.id || id, phase: 'case2-grand-call', lines: grand.lines,
+          desc: `case2에 더할 손자 항 ${grand.label} = ${grand.id ? `Node ${grand.id}` : 'nullptr'}의 LIS를 계산합니다.`,
+          formula: `<code>grandPart = LIS(${grand.id ? `Node ${grand.id}` : 'nullptr'})</code>`,
+          decision: 'case2 손자 호출',
+          case1,
+          case2,
+          candidate: case2.set,
+          blocked: childIds(id)
+        });
+        const grandResult = lis(grand.id, `case2 ${grand.label}`);
+        case2 = mergeResults(case2, grandResult);
+        push({
+          node: id, phase: 'case2-grand-done', lines: grand.lines,
+          desc: `${grand.label} 결과 ${grandResult.size}를 case2에 더했습니다. 현재 case2=${case2.size}입니다.`,
+          formula: `<code>case2 = ${case2.size}</code>`,
+          decision: 'case2 누적',
+          case1,
+          case2,
+          candidate: case2.set,
+          blocked: childIds(id)
+        });
+      });
+
       addTrace(`#${currentCall} Node ${id} case2 = ${case2.size}`);
       push({
-        node: id, phase: 'case2', lines: useMemo ? [6, 7, 8, 9, 10] : [5, 6, 7, 8, 9],
-        desc: `Node ${id}를 포함하는 경우입니다. 자식은 선택하지 않고 손자들의 결과만 더합니다.`,
+        node: id, phase: 'case2-done', lines: useMemo ? [6, 7, 8, 9, 10] : [5, 6, 7, 8, 9],
+        desc: `모든 손자 항을 더해 case2 계산이 끝났습니다. case2=${case2.size}입니다.`,
         formula: `<code>case2 = 1 + LIS(grandchildren) = ${case2.size}</code>`,
-        decision: 'root 포함',
+        decision: 'case2 완료',
         case1,
         case2,
         candidate: case2.set,
@@ -377,13 +500,14 @@ h1{font-size:16px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
     const case1 = step.case1;
     const case2 = step.case2;
     const result = step.result;
+    const phase = step.phase || '';
     refs.cases.innerHTML = `<div class="case-list">
-      <div class="case-row ${step.phase === 'case1' ? 'active' : ''} ${result && case1 && result.size === case1.size ? 'win' : ''}">
+      <div class="case-row ${phase.startsWith('case1') ? 'active' : ''} ${result && case1 && result.size === case1.size ? 'win' : ''}">
         <div class="case-name">case1 / root 제외</div>
         <div class="case-main">${case1 ? case1.size : '-'}</div>
         <div class="case-sub">${case1 ? `{${case1.set.join(', ')}}` : '자식들을 선택 가능'}</div>
       </div>
-      <div class="case-row ${step.phase === 'case2' ? 'active' : ''} ${result && case2 && result.size === case2.size ? 'win' : ''}">
+      <div class="case-row ${phase.startsWith('case2') ? 'active' : ''} ${result && case2 && result.size === case2.size ? 'win' : ''}">
         <div class="case-name">case2 / root 포함</div>
         <div class="case-main">${case2 ? case2.size : '-'}</div>
         <div class="case-sub">${case2 ? `{${case2.set.join(', ')}}` : '자식은 제외하고 손자들을 선택'}</div>
