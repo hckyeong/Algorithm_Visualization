@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MaxHeap 시각화</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Courier New",monospace;font-size:13px;padding:16px}
+h1{margin:0 0 8px;color:#b9b9b9;font-size:16px;font-weight:500;letter-spacing:.2px}
+.sub{margin:0 0 12px;color:#9a9a9a;line-height:1.65}
+#tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tab{border:1px solid #3e3e42;background:#252526;color:#d4d4d4;border-radius:4px;padding:7px 12px;font-family:inherit;font-weight:700;cursor:pointer}
+.tab.active{border-color:#ce9178;background:rgba(206,145,120,.22);color:#ffd8a8}
+#step-counter{font-size:12px;color:#858585;margin-top:8px}
+#step-desc{min-height:54px;margin:6px 0 10px;padding:10px 12px;border-left:3px solid #569cd6;border-radius:0 5px 5px 0;background:#252526;color:#efefef;line-height:1.65}
+#step-desc strong{color:#ffe8a3}
+#legend{display:flex;gap:13px;flex-wrap:wrap;margin:10px 0 14px}
+.leg{display:flex;align-items:center;gap:5px;color:#858585;font-size:11px}
+.leg-c{width:10px;height:10px;border:1.5px solid;border-radius:50%}
+#main-content{display:grid;grid-template-columns:minmax(420px,1.2fr) minmax(360px,.8fr);gap:14px;align-items:start}
+.panel{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:10px}
+.slabel{margin-bottom:8px;color:#858585;font-size:10px;letter-spacing:.6px;text-transform:uppercase}
+#tree-svg{display:block;width:100%;min-height:300px}
+.edge{stroke:#54545a;stroke-width:2}
+.node{fill:#2d2d30;stroke:#686870;stroke-width:2;transition:.2s}
+.node.current{fill:rgba(206,145,120,.22);stroke:#ce9178}
+.node.parent,.node.source{fill:rgba(86,156,214,.18);stroke:#569cd6}
+.node.child,.node.candidate{fill:rgba(197,134,192,.18);stroke:#c586c0}
+.node.moved{fill:rgba(78,201,176,.18);stroke:#4ec9b0}
+.node.removed{fill:rgba(244,71,71,.15);stroke:#f44747}
+.node.final{fill:rgba(181,206,168,.18);stroke:#b5cea8}
+.node-text{fill:#f5f5f5;font-size:16px;font-weight:700;text-anchor:middle;dominant-baseline:middle}
+.idx-text{fill:#858585;font-size:10px;text-anchor:middle}
+.heap-note{margin-top:8px;color:#9a9a9a;font-size:12px;line-height:1.6}
+#right-panel{display:grid;gap:10px}
+.state-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.state-card{min-height:74px;background:#1f1f1f;border:1px solid #3e3e42;border-radius:5px;padding:10px}
+.state-card.active{border-color:#ce9178;background:rgba(206,145,120,.13)}
+.state-card .key{margin-bottom:6px;color:#858585;font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+.state-card .val{color:#fff3b0;font-size:18px;font-weight:800;line-height:1.2}
+.state-card .hint{margin-top:3px;color:#9cdcfe;font-size:12px;line-height:1.35}
+.formula{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.formula div{background:#1f1f1f;border:1px solid #3e3e42;border-radius:4px;padding:8px;color:#c8c8c8;text-align:center}
+.formula b{color:#9cdcfe}
+.array-panel{margin-top:14px}
+.array-wrap{overflow-x:auto;padding-bottom:2px}
+.array-grid{display:grid;gap:5px;min-width:max-content}
+.arr-row{display:grid;grid-template-columns:58px repeat(var(--cols),58px);gap:5px;align-items:center}
+.arr-head{color:#858585;font-size:11px;text-align:right;padding-right:6px}
+.cell{height:42px;border:1px solid #3e3e42;border-radius:5px;background:#1f1f1f;display:flex;align-items:center;justify-content:center;color:#d4d4d4;font-weight:800;transition:.2s}
+.cell.idx{height:24px;color:#858585;font-size:11px;background:transparent;border-color:transparent;font-weight:600}
+.cell.unused{color:#656565;background:#191919}
+.cell.inactive{color:#555;background:#1b1b1b;border-style:dashed}
+.cell.current{border-color:#ce9178;background:rgba(206,145,120,.2);color:#ffe8a3}
+.cell.parent,.cell.source{border-color:#569cd6;background:rgba(86,156,214,.16);color:#c7e4ff}
+.cell.child,.cell.candidate{border-color:#c586c0;background:rgba(197,134,192,.15);color:#ffd6ff}
+.cell.moved{border-color:#4ec9b0;background:rgba(78,201,176,.16);color:#c7fff2}
+.cell.removed{border-color:#f44747;background:rgba(244,71,71,.14);color:#ffb6b6}
+.cell.final{border-color:#b5cea8;background:rgba(181,206,168,.16);color:#e6ffd6}
+.items-grid{display:grid;grid-template-columns:repeat(9,minmax(34px,1fr));gap:5px}
+.item-token{min-height:32px;border:1px solid #3e3e42;border-radius:5px;background:#1f1f1f;display:flex;align-items:center;justify-content:center;color:#dcdcaa;font-weight:800}
+.item-token.done{border-color:#4ec9b0;color:#4ec9b0;background:rgba(78,201,176,.1)}
+.item-token.active{border-color:#ce9178;color:#ffe8a3;background:rgba(206,145,120,.18)}
+.output{display:flex;flex-wrap:wrap;gap:5px;min-height:34px;align-items:center}
+.out-token{min-width:32px;min-height:30px;border:1px solid #4ec9b0;border-radius:4px;background:rgba(78,201,176,.12);color:#c7fff2;display:flex;align-items:center;justify-content:center;font-weight:800}
+.empty{color:#555;font-size:12px}
+#code-panel{margin-top:14px;background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden}
+#code-title{background:#2d2d30;border-bottom:1px solid #3e3e42;color:#858585;font-size:11px;padding:5px 12px}
+#code-body{padding:6px 0;max-height:360px;overflow:auto}
+.cline{display:grid;grid-template-columns:42px 1fr;align-items:start;min-height:19px;border-left:3px solid transparent}
+.cline.hl{background:rgba(255,255,140,.08);border-left-color:#dcdcaa}
+.lnum{padding-right:10px;color:#555;text-align:right;user-select:none}
+.lcode{white-space:pre;color:#d4d4d4;font-size:12px;line-height:1.45}
+.indent1{box-shadow:inset 18px 0 0 rgba(255,255,255,.025)}
+.indent2{box-shadow:inset 18px 0 0 rgba(255,255,255,.025),inset 36px 0 0 rgba(255,255,255,.018)}
+.kw{color:#569cd6}.tp{color:#4ec9b0}.fn{color:#dcdcaa}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}.str{color:#ce9178}
+#nav{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px 0 4px;flex-wrap:wrap}
+.nbtn{min-width:88px;background:#2d2d30;border:1px solid #3e3e42;color:#d4d4d4;border-radius:4px;padding:7px 14px;font-family:inherit;cursor:pointer}
+.nbtn:hover:not(:disabled){background:#3a3a3d}
+.nbtn:disabled{opacity:.35;cursor:default}
+#progress{min-width:110px;text-align:center;color:#858585}
+@media (max-width:900px){
+  body{padding:12px}
+  #main-content{grid-template-columns:1fr}
+  .state-grid{grid-template-columns:1fr}
+  .formula{grid-template-columns:1fr}
+  .arr-row{grid-template-columns:48px repeat(var(--cols),50px)}
+  .cell{height:38px}
+}
+</style>
+</head>
+<body>
+<h1>MaxHeap / 최대 힙 시각화</h1>
+<p class="sub">제공된 C++ 코드의 <code>Push()</code>, <code>Top()</code>, <code>Pop()</code> 진행을 1-based 배열과 완전 이진 트리로 동시에 보여줍니다. 예제 입력은 <code>{ 2, 8, 5, 3, 2, 1, 9, 3, 7 }</code>입니다.</p>
+
+<div id="tabs">
+  <button class="tab active" data-mode="all">전체 진행</button>
+  <button class="tab" data-mode="push">Push / 삽입</button>
+  <button class="tab" data-mode="pop">Pop / 삭제와 힙 정렬</button>
+</div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+
+<div id="legend">
+  <div class="leg"><span class="leg-c" style="border-color:#ce9178;background:rgba(206,145,120,.2)"></span>현재 위치</div>
+  <div class="leg"><span class="leg-c" style="border-color:#569cd6;background:rgba(86,156,214,.16)"></span>부모/원본</div>
+  <div class="leg"><span class="leg-c" style="border-color:#c586c0;background:rgba(197,134,192,.16)"></span>자식 후보</div>
+  <div class="leg"><span class="leg-c" style="border-color:#4ec9b0;background:rgba(78,201,176,.16)"></span>복사/확정</div>
+  <div class="leg"><span class="leg-c" style="border-color:#f44747;background:rgba(244,71,71,.15)"></span>삭제 루트</div>
+</div>
+
+<div id="main-content">
+  <section class="panel">
+    <div class="slabel">Complete Binary Tree / 완전 이진 트리 표현</div>
+    <svg id="tree-svg" viewBox="0 0 620 320" role="img" aria-label="Max heap tree"></svg>
+    <p class="heap-note">트리는 개념 설명용이고, 실제 구현은 아래의 <strong>heap_[index]</strong> 배열입니다. <strong>heap_[0]</strong>은 사용하지 않습니다.</p>
+  </section>
+
+  <aside id="right-panel">
+    <section class="panel">
+      <div class="slabel">Input Items / 삽입 순서</div>
+      <div id="items" class="items-grid"></div>
+    </section>
+    <section class="panel">
+      <div class="slabel">Runtime State / 실행 상태</div>
+      <div class="state-grid">
+        <div class="state-card active"><div class="key">Operation</div><div id="op" class="val">-</div><div id="op-hint" class="hint">-</div></div>
+        <div class="state-card"><div class="key">size_ / capacity_</div><div id="sizecap" class="val">0 / 10</div><div class="hint">현재 논리 크기와 배열 용량</div></div>
+        <div class="state-card"><div class="key">Current / Parent / Child</div><div id="indices" class="val">-</div><div id="idx-hint" class="hint">-</div></div>
+        <div class="state-card"><div class="key">Top Output</div><div id="output" class="output"></div></div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="slabel">Index Formula / 배열 인덱스 관계</div>
+      <div class="formula">
+        <div>왼쪽 자식<br><b>i * 2</b></div>
+        <div>오른쪽 자식<br><b>i * 2 + 1</b></div>
+        <div>부모<br><b>i / 2</b></div>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<section class="panel array-panel">
+  <div class="slabel">heap_ Array / 실제 자료구조</div>
+  <div class="array-wrap">
+    <div id="array-grid" class="array-grid"></div>
+  </div>
+</section>
+
+<section id="code-panel">
+  <div id="code-title">MaxHeap&lt;T&gt; 핵심 코드</div>
+  <div id="code-body"></div>
+</section>
+
+<div id="nav">
+  <button id="first" class="nbtn">Home</button>
+  <button id="prev" class="nbtn">← 이전</button>
+  <button id="play" class="nbtn">재생</button>
+  <span id="progress"></span>
+  <button id="next" class="nbtn">다음 →</button>
+  <button id="last" class="nbtn">End</button>
+</div>
+
+<script>
+const INPUT = [2, 8, 5, 3, 2, 1, 9, 3, 7];
+const CAPACITY = 10;
+const POS = {
+  1:[310,36], 2:[180,112], 3:[440,112],
+  4:[105,198], 5:[255,198], 6:[365,198], 7:[515,198],
+  8:[65,282], 9:[145,282], 10:[215,282]
+};
+
+const CODE = [
+  ['MaxHeap(int cap = 10)',0],
+  ['{',0],
+  ['    capacity_ = cap; size_ = 0;',1],
+  ['    heap_ = new T[capacity_ + 1]; // heap_[0]은 비워둠',1],
+  ['}',0],
+  ['',0],
+  ['void Push(const T& item)',0],
+  ['{',0],
+  ['    if (size_ == capacity_) Resize(capacity_ * 2);',1],
+  ['    size_ += 1;',1],
+  ['    int current = size_;',1],
+  ['    while (current != 1 && heap_[current / 2] < item)',1],
+  ['    {',1],
+  ['        heap_[current] = heap_[current / 2];',2],
+  ['        current = current / 2;',2],
+  ['    }',1],
+  ['    heap_[current] = item;',1],
+  ['}',0],
+  ['',0],
+  ['void Pop()',0],
+  ['{',0],
+  ['    heap_[1].~T();',1],
+  ['    T last_item = heap_[size_];',1],
+  ['    size_--;',1],
+  ['    int current = 1;',1],
+  ['    int child = 2;',1],
+  ['    while (child <= size_)',1],
+  ['    {',1],
+  ['        if (child < size_ && heap_[child] < heap_[child + 1])',2],
+  ['            child += 1;',2],
+  ['        if (last_item >= heap_[child]) break;',2],
+  ['        heap_[current] = heap_[child];',2],
+  ['        current = child;',2],
+  ['        child *= 2;',2],
+  ['    }',1],
+  ['    heap_[current] = last_item;',1],
+  ['}',0],
+  ['',0],
+  ['for (auto i : { 2, 8, 5, 3, 2, 1, 9, 3, 7 })',0],
+  ['    h.Push(i);',1],
+  ['while (!h.IsEmpty()) { cout << h.Top(); h.Pop(); }',0]
+];
+
+const LINE = {
+  ctor:3, pushCall:40, cap:9, size:10, current:11, pushWhile:12, pushCopy:14, pushMove:15, pushPlace:17,
+  top:41, popCall:20, destroy:22, last:23, dec:24, popCurrent:25, popChild:26, popWhile:27,
+  choose:29, childInc:30, compareLast:31, popCopy:32, popMove:33, popChildMove:34, popPlace:36
+};
+
+function cloneHeap(heap){ return heap.slice(); }
+function compactIndex(index){ return index ? String(index) : '-'; }
+
+function makeStep(list, data){
+  const heap = cloneHeap(data.heap);
+  list.push({
+    phase:data.phase,
+    title:data.title,
+    desc:data.desc,
+    heap,
+    size:data.size,
+    capacity:data.capacity ?? CAPACITY,
+    current:data.current ?? null,
+    parent:data.parent ?? null,
+    child:data.child ?? null,
+    last:data.last ?? null,
+    item:data.item ?? null,
+    output:[...(data.output ?? [])],
+    inputPos:data.inputPos ?? 0,
+    line:data.line,
+    marks:data.marks ?? {},
+    hint:data.hint ?? ''
+  });
+}
+
+function buildSteps(){
+  const steps = [];
+  const heap = new Array(CAPACITY + 1).fill(null);
+  let size = 0;
+  const output = [];
+
+  makeStep(steps,{
+    phase:'all', title:'Constructor', heap, size, output, line:LINE.ctor,
+    desc:'<strong>MaxHeap&lt;int&gt; h</strong> 생성. capacity_ = 10, size_ = 0이고 heap_[0]은 비워 둡니다.',
+    hint:'heap_[0]은 사용하지 않는 자리입니다.'
+  });
+
+  INPUT.forEach((item, inputIndex) => {
+    makeStep(steps,{
+      phase:'push', title:`Push(${item})`, heap, size, item, output, inputPos:inputIndex, line:LINE.pushCall,
+      desc:`main의 for 반복문에서 <strong>h.Push(${item})</strong>를 호출합니다.`,
+      hint:'새 값은 일단 마지막 자리로 들어갈 준비를 합니다.'
+    });
+    makeStep(steps,{
+      phase:'push', title:`Push(${item})`, heap, size, item, output, inputPos:inputIndex, line:LINE.cap,
+      desc:`size_=${size}, capacity_=${CAPACITY}. 아직 용량이 남아 있어 Resize()는 호출하지 않습니다.`,
+      hint:'예제는 9개만 삽입하므로 capacity 10 안에 들어갑니다.'
+    });
+    size += 1;
+    let current = size;
+    makeStep(steps,{
+      phase:'push', title:`Push(${item})`, heap, size, current, item, output, inputPos:inputIndex, line:LINE.size,
+      desc:`size_를 1 증가시켜 새 원소가 들어갈 마지막 인덱스 <strong>${current}</strong>를 만듭니다.`,
+      marks:{[current]:'current'}, hint:`current = size_ = ${current}`
+    });
+    makeStep(steps,{
+      phase:'push', title:`Push(${item})`, heap, size, current, item, output, inputPos:inputIndex, line:LINE.current,
+      desc:`current를 마지막 위치 <strong>${current}</strong>로 설정합니다.`,
+      marks:{[current]:'current'}, hint:'부모와 비교하며 위로 올라갈 수 있습니다.'
+    });
+
+    while (current !== 1 && heap[Math.floor(current / 2)] < item) {
+      const parent = Math.floor(current / 2);
+      makeStep(steps,{
+        phase:'push', title:`Push(${item})`, heap, size, current, parent, item, output, inputPos:inputIndex, line:LINE.pushWhile,
+        desc:`부모 heap_[${parent}] = <strong>${heap[parent]}</strong>가 item <strong>${item}</strong>보다 작으므로 부모 값을 아래로 내립니다.`,
+        marks:{[current]:'current',[parent]:'parent'}, hint:`heap_[${parent}] < ${item}`
+      });
+      heap[current] = heap[parent];
+      makeStep(steps,{
+        phase:'push', title:`Push(${item})`, heap, size, current, parent, item, output, inputPos:inputIndex, line:LINE.pushCopy,
+        desc:`heap_[${current}] = heap_[${parent}]를 수행해 부모 값 <strong>${heap[parent]}</strong>을 자식 위치로 복사합니다.`,
+        marks:{[current]:'moved',[parent]:'source'}, hint:'item은 아직 임시로 들고 있습니다.'
+      });
+      current = parent;
+      makeStep(steps,{
+        phase:'push', title:`Push(${item})`, heap, size, current, parent, item, output, inputPos:inputIndex, line:LINE.pushMove,
+        desc:`current를 부모 위치 <strong>${current}</strong>로 이동합니다.`,
+        marks:{[current]:'current'}, hint:'다음 반복에서 다시 부모와 비교합니다.'
+      });
+    }
+
+    if (current !== 1) {
+      const parent = Math.floor(current / 2);
+      makeStep(steps,{
+        phase:'push', title:`Push(${item})`, heap, size, current, parent, item, output, inputPos:inputIndex, line:LINE.pushWhile,
+        desc:`부모 heap_[${parent}] = <strong>${heap[parent]}</strong>가 item <strong>${item}</strong> 이상이므로 상승을 멈춥니다.`,
+        marks:{[current]:'current',[parent]:'parent'}, hint:`heap_[${parent}] >= ${item}`
+      });
+    } else {
+      makeStep(steps,{
+        phase:'push', title:`Push(${item})`, heap, size, current, item, output, inputPos:inputIndex, line:LINE.pushWhile,
+        desc:'current가 루트 1번이므로 더 이상 위로 올라갈 수 없습니다.',
+        marks:{[current]:'current'}, hint:'current == 1'
+      });
+    }
+
+    heap[current] = item;
+    makeStep(steps,{
+      phase:'push', title:`Push(${item})`, heap, size, current, item, output, inputPos:inputIndex + 1, line:LINE.pushPlace,
+      desc:`최종 위치 heap_[${current}]에 item <strong>${item}</strong>을 저장합니다.`,
+      marks:{[current]:'final'}, hint:'부모가 자식보다 크거나 같은 최대 힙 조건을 유지합니다.'
+    });
+  });
+
+  while (size > 0) {
+    const top = heap[1];
+    output.push(top);
+    makeStep(steps,{
+      phase:'pop', title:`Top() = ${top}`, heap, size, output, inputPos:INPUT.length, line:LINE.top,
+      desc:`while 루프에서 <strong>h.Top()</strong>을 출력합니다. 현재 루트 heap_[1] = <strong>${top}</strong>입니다.`,
+      marks:{1:'removed'}, hint:'최대 힙의 Top은 항상 현재 최댓값입니다.'
+    });
+
+    makeStep(steps,{
+      phase:'pop', title:'Pop()', heap, size, output, inputPos:INPUT.length, line:LINE.popCall,
+      desc:'출력한 루트 값을 제거하기 위해 <strong>h.Pop()</strong>을 호출합니다.',
+      marks:{1:'removed'}, hint:'마지막 값을 루트 후보로 들고 내려 보냅니다.'
+    });
+
+    const oldSize = size;
+    const lastItem = heap[size];
+    heap[1] = null;
+    makeStep(steps,{
+      phase:'pop', title:'Pop()', heap, size, output, inputPos:INPUT.length, line:LINE.destroy,
+      desc:'heap_[1]의 원소를 삭제합니다. 루트 위치는 잠시 비어 있는 자리로 표시됩니다.',
+      marks:{1:'removed', [oldSize]:'source'}, hint:`마지막 원소 ${lastItem}을 루트 후보로 사용합니다.`
+    });
+
+    makeStep(steps,{
+      phase:'pop', title:'Pop()', heap, size, last:lastItem, output, inputPos:INPUT.length, line:LINE.last,
+      desc:`마지막 원소 heap_[${oldSize}] = <strong>${lastItem}</strong>를 last_item으로 복사합니다.`,
+      marks:{1:'removed', [oldSize]:'source'}, hint:`last_item = ${lastItem}`
+    });
+
+    size -= 1;
+    heap[oldSize] = null;
+    let current = 1;
+    let child = 2;
+    makeStep(steps,{
+      phase:'pop', title:'Pop()', heap, size, current, child, last:lastItem, output, inputPos:INPUT.length, line:LINE.dec,
+      desc:`size_를 1 줄입니다. 이제 논리 크기는 <strong>${size}</strong>입니다.`,
+      marks:size > 0 ? {1:'current'} : {}, hint:'배열의 마지막 칸은 더 이상 힙에 포함되지 않습니다.'
+    });
+
+    if (size === 0) {
+      makeStep(steps,{
+        phase:'pop', title:'Pop()', heap, size, current, last:lastItem, output, inputPos:INPUT.length, line:LINE.popPlace,
+        desc:'힙이 비었으므로 last_item을 다시 배치할 위치가 없습니다. Pop이 종료됩니다.',
+        marks:{}, hint:'IsEmpty()가 true가 됩니다.'
+      });
+      continue;
+    }
+
+    makeStep(steps,{
+      phase:'pop', title:'Pop()', heap, size, current, child, last:lastItem, output, inputPos:INPUT.length, line:LINE.popCurrent,
+      desc:'current를 루트 1번으로 설정하고, 왼쪽 자식 child를 2번으로 설정합니다.',
+      marks:{[current]:'current',[child]:'child'}, hint:`current=${current}, child=${child}`
+    });
+
+    while (child <= size) {
+      makeStep(steps,{
+        phase:'pop', title:'Pop()', heap, size, current, child, last:lastItem, output, inputPos:INPUT.length, line:LINE.popWhile,
+        desc:`child=${child}가 size_=${size} 이하이므로 아래로 내려갈 자식 후보가 있습니다.`,
+        marks:{[current]:'current',[child]:'child'}, hint:'더 큰 자식과 last_item을 비교합니다.'
+      });
+
+      if (child < size) {
+        makeStep(steps,{
+          phase:'pop', title:'Pop()', heap, size, current, child, last:lastItem, output, inputPos:INPUT.length, line:LINE.choose,
+          desc:`왼쪽 자식 heap_[${child}] = <strong>${heap[child]}</strong>, 오른쪽 자식 heap_[${child + 1}] = <strong>${heap[child + 1]}</strong>를 비교합니다.`,
+          marks:{[current]:'current',[child]:'candidate',[child + 1]:'candidate'}, hint:'둘 중 큰 자식을 위로 올릴 후보로 선택합니다.'
+        });
+        if (heap[child] < heap[child + 1]) {
+          child += 1;
+          makeStep(steps,{
+            phase:'pop', title:'Pop()', heap, size, current, child, last:lastItem, output, inputPos:INPUT.length, line:LINE.childInc,
+            desc:`오른쪽 자식이 더 크므로 child를 <strong>${child}</strong>로 바꿉니다.`,
+            marks:{[current]:'current',[child]:'child'}, hint:'child += 1'
+          });
+        }
+      }
+
+      makeStep(steps,{
+        phase:'pop', title:'Pop()', heap, size, current, child, last:lastItem, output, inputPos:INPUT.length, line:LINE.compareLast,
+        desc:`last_item <strong>${lastItem}</strong>과 더 큰 자식 heap_[${child}] = <strong>${heap[child]}</strong>를 비교합니다.`,
+        marks:{[current]:'current',[child]:'child'}, hint:lastItem >= heap[child] ? 'last_item이 더 크거나 같으면 중단합니다.' : '자식이 더 크므로 자식을 위로 복사합니다.'
+      });
+
+      if (lastItem >= heap[child]) break;
+
+      heap[current] = heap[child];
+      makeStep(steps,{
+        phase:'pop', title:'Pop()', heap, size, current, child, last:lastItem, output, inputPos:INPUT.length, line:LINE.popCopy,
+        desc:`heap_[${current}] = heap_[${child}]를 수행해 더 큰 자식 <strong>${heap[current]}</strong>을 부모 위치로 올립니다.`,
+        marks:{[current]:'moved',[child]:'source'}, hint:'비어 있던 자리는 child 위치로 내려갑니다.'
+      });
+      current = child;
+      child *= 2;
+      makeStep(steps,{
+        phase:'pop', title:'Pop()', heap, size, current, child, last:lastItem, output, inputPos:INPUT.length, line:LINE.popMove,
+        desc:`current를 방금 복사한 자식 위치 <strong>${current}</strong>로 이동합니다.`,
+        marks:{[current]:'current'}, hint:`다음 왼쪽 자식 후보는 child=${child}입니다.`
+      });
+      makeStep(steps,{
+        phase:'pop', title:'Pop()', heap, size, current, child, last:lastItem, output, inputPos:INPUT.length, line:LINE.popChildMove,
+        desc:`child *= 2를 적용해 다음 왼쪽 자식 후보를 <strong>${child}</strong>로 갱신합니다.`,
+        marks:{[current]:'current', ...(child <= size ? {[child]:'child'} : {})}, hint:child <= size ? '다음 레벨을 계속 검사합니다.' : '더 내려갈 자식이 없습니다.'
+      });
+    }
+
+    heap[current] = lastItem;
+    makeStep(steps,{
+      phase:'pop', title:'Pop()', heap, size, current, last:lastItem, output, inputPos:INPUT.length, line:LINE.popPlace,
+      desc:`최종 위치 heap_[${current}]에 last_item <strong>${lastItem}</strong>을 저장합니다.`,
+      marks:{[current]:'final'}, hint:'Pop 이후에도 최대 힙 조건을 유지합니다.'
+    });
+  }
+
+  makeStep(steps,{
+    phase:'pop', title:'Heap Sort Result', heap, size, output, inputPos:INPUT.length, line:LINE.top,
+    desc:`모든 Pop이 끝났습니다. 출력 순서가 힙 정렬 결과입니다: <strong>${output.join(' ')}</strong>`,
+    marks:{}, hint:'최대 힙에서 반복적으로 Top을 꺼내면 내림차순 결과가 나옵니다.'
+  });
+
+  return steps;
+}
+
+const ALL_STEPS = buildSteps();
+let mode = 'all';
+let index = 0;
+let playing = false;
+let timer = null;
+
+function visibleSteps(){
+  if (mode === 'all') return ALL_STEPS;
+  return ALL_STEPS.filter(step => step.phase === mode);
+}
+
+function escapeHtml(text){
+  return text.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function renderCode(activeLine){
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE.forEach(([text, indent], i) => {
+    const lineNo = i + 1;
+    const row = document.createElement('div');
+    row.className = `cline ${lineNo === activeLine ? 'hl' : ''}`;
+    const num = document.createElement('div');
+    num.className = 'lnum';
+    num.textContent = lineNo;
+    const code = document.createElement('div');
+    code.className = `lcode indent${Math.min(indent, 2)}`;
+    code.innerHTML = colorize(text);
+    row.append(num, code);
+    body.append(row);
+  });
+}
+
+function colorize(text){
+  let safe = escapeHtml(text);
+  safe = safe.replace(/\b(template|typename|class|public|private|void|int|if|while|for|auto|return|const|new|delete|bool)\b/g,'<span class="kw">$1</span>');
+  safe = safe.replace(/\b(MaxHeap|T|Resize|Push|Pop|Top|IsEmpty)\b/g,'<span class="tp">$1</span>');
+  safe = safe.replace(/\b(size_|capacity_|heap_|current|child|last_item|item)\b/g,'<span class="fn">$1</span>');
+  safe = safe.replace(/\b(\d+)\b/g,'<span class="num">$1</span>');
+  safe = safe.replace(/(\/\/.*)$/,'<span class="cm">$1</span>');
+  return safe;
+}
+
+function renderItems(step){
+  const root = document.getElementById('items');
+  root.innerHTML = '';
+  INPUT.forEach((value, i) => {
+    const el = document.createElement('div');
+    el.className = 'item-token';
+    if (i < step.inputPos) el.classList.add('done');
+    if (i === step.inputPos && step.phase === 'push') el.classList.add('active');
+    el.textContent = value;
+    root.append(el);
+  });
+}
+
+function cellClass(step, idx){
+  if (idx === 0) return 'unused';
+  if (idx > step.size) return 'inactive';
+  return step.marks[idx] || '';
+}
+
+function renderArray(step){
+  const cols = Math.max(CAPACITY + 1, 2);
+  const grid = document.getElementById('array-grid');
+  grid.style.setProperty('--cols', cols);
+  grid.innerHTML = '';
+  const idxRow = document.createElement('div');
+  idxRow.className = 'arr-row';
+  idxRow.append(rowHead('Index'));
+  for (let i = 0; i <= CAPACITY; i++) idxRow.append(cell(String(i), 'idx'));
+  const valRow = document.createElement('div');
+  valRow.className = 'arr-row';
+  valRow.append(rowHead('Value'));
+  for (let i = 0; i <= CAPACITY; i++) {
+    let value = i === 0 ? '비움' : (i <= step.size ? (step.heap[i] ?? '빈칸') : '');
+    valRow.append(cell(String(value), cellClass(step, i)));
+  }
+  grid.append(idxRow, valRow);
+}
+
+function rowHead(text){
+  const el = document.createElement('div');
+  el.className = 'arr-head';
+  el.textContent = text;
+  return el;
+}
+
+function cell(text, cls){
+  const el = document.createElement('div');
+  el.className = `cell ${cls || ''}`;
+  el.textContent = text;
+  return el;
+}
+
+function renderTree(step){
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  const ns = 'http://www.w3.org/2000/svg';
+  for (let i = 2; i <= step.size; i++) {
+    const p = Math.floor(i / 2);
+    if (!POS[i] || !POS[p]) continue;
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', POS[p][0]);
+    line.setAttribute('y1', POS[p][1]);
+    line.setAttribute('x2', POS[i][0]);
+    line.setAttribute('y2', POS[i][1]);
+    line.setAttribute('class', 'edge');
+    svg.append(line);
+  }
+  for (let i = 1; i <= Math.max(step.size, step.current || 0); i++) {
+    if (!POS[i] || i > CAPACITY) continue;
+    const group = document.createElementNS(ns, 'g');
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', POS[i][0]);
+    c.setAttribute('cy', POS[i][1]);
+    c.setAttribute('r', 24);
+    c.setAttribute('class', `node ${step.marks[i] || ''}`);
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', POS[i][0]);
+    t.setAttribute('y', POS[i][1]);
+    t.setAttribute('class', 'node-text');
+    t.textContent = step.heap[i] ?? '·';
+    const idx = document.createElementNS(ns, 'text');
+    idx.setAttribute('x', POS[i][0]);
+    idx.setAttribute('y', POS[i][1] + 38);
+    idx.setAttribute('class', 'idx-text');
+    idx.textContent = `heap_[${i}]`;
+    group.append(c, t, idx);
+    svg.append(group);
+  }
+}
+
+function renderState(step, pos, total){
+  document.getElementById('step-counter').textContent = `Step ${pos + 1} / ${total}`;
+  document.getElementById('step-desc').innerHTML = step.desc;
+  document.getElementById('op').textContent = step.title;
+  document.getElementById('op-hint').textContent = step.hint || '-';
+  document.getElementById('sizecap').textContent = `${step.size} / ${step.capacity}`;
+  const parts = [
+    `cur:${compactIndex(step.current)}`,
+    `par:${compactIndex(step.parent)}`,
+    `child:${compactIndex(step.child)}`
+  ];
+  document.getElementById('indices').textContent = parts.join(' ');
+  const extra = [];
+  if (step.item !== null && step.item !== undefined) extra.push(`item=${step.item}`);
+  if (step.last !== null && step.last !== undefined) extra.push(`last_item=${step.last}`);
+  document.getElementById('idx-hint').textContent = extra.length ? extra.join(', ') : '-';
+  const output = document.getElementById('output');
+  output.innerHTML = '';
+  if (!step.output.length) {
+    const empty = document.createElement('span');
+    empty.className = 'empty';
+    empty.textContent = '아직 출력 없음';
+    output.append(empty);
+  } else {
+    step.output.forEach(v => {
+      const token = document.createElement('span');
+      token.className = 'out-token';
+      token.textContent = v;
+      output.append(token);
+    });
+  }
+}
+
+function render(){
+  const steps = visibleSteps();
+  if (index >= steps.length) index = steps.length - 1;
+  if (index < 0) index = 0;
+  const step = steps[index];
+  renderState(step, index, steps.length);
+  renderItems(step);
+  renderArray(step);
+  renderTree(step);
+  renderCode(step.line);
+  document.getElementById('progress').textContent = `${index + 1} / ${steps.length}`;
+  document.getElementById('first').disabled = index === 0;
+  document.getElementById('prev').disabled = index === 0;
+  document.getElementById('next').disabled = index === steps.length - 1;
+  document.getElementById('last').disabled = index === steps.length - 1;
+}
+
+function move(delta){
+  const steps = visibleSteps();
+  index = Math.max(0, Math.min(steps.length - 1, index + delta));
+  render();
+}
+
+function setMode(nextMode){
+  mode = nextMode;
+  index = 0;
+  document.querySelectorAll('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+  stop();
+  render();
+}
+
+function play(){
+  if (playing) return stop();
+  playing = true;
+  document.getElementById('play').textContent = '정지';
+  timer = setInterval(() => {
+    const steps = visibleSteps();
+    if (index >= steps.length - 1) {
+      stop();
+      return;
+    }
+    move(1);
+  }, 900);
+}
+
+function stop(){
+  playing = false;
+  document.getElementById('play').textContent = '재생';
+  if (timer) clearInterval(timer);
+  timer = null;
+}
+
+document.getElementById('first').addEventListener('click', () => { index = 0; render(); });
+document.getElementById('prev').addEventListener('click', () => move(-1));
+document.getElementById('next').addEventListener('click', () => move(1));
+document.getElementById('last').addEventListener('click', () => { index = visibleSteps().length - 1; render(); });
+document.getElementById('play').addEventListener('click', play);
+document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+document.addEventListener('keydown', event => {
+  if (event.target && ['INPUT','TEXTAREA','SELECT','BUTTON'].includes(event.target.tagName)) return;
+  if (event.key === 'ArrowLeft') move(-1);
+  if (event.key === 'ArrowRight') move(1);
+  if (event.key === 'Home') { index = 0; render(); }
+  if (event.key === 'End') { index = visibleSteps().length - 1; render(); }
+  if (event.code === 'Space') { event.preventDefault(); play(); }
+});
+
+render();
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>

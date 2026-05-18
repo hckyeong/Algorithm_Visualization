@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Huffman Coding 시각화</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Courier New",monospace;font-size:13px;padding:16px}
+h1{margin:0 0 8px;color:#b9b9b9;font-size:16px;font-weight:500}
+.sub{margin:0 0 12px;color:#9a9a9a;line-height:1.65}
+#tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tab{border:1px solid #3e3e42;background:#252526;color:#d4d4d4;border-radius:4px;padding:7px 12px;font-family:inherit;font-weight:700;cursor:pointer}
+.tab.active{border-color:#ce9178;background:rgba(206,145,120,.22);color:#ffd8a8}
+#step-counter{font-size:12px;color:#858585;margin-top:8px}
+#step-desc{min-height:58px;margin:6px 0 10px;padding:10px 12px;border-left:3px solid #569cd6;border-radius:0 5px 5px 0;background:#252526;color:#efefef;line-height:1.65}
+#step-desc strong{color:#ffe8a3}
+#legend{display:flex;gap:13px;flex-wrap:wrap;margin:10px 0 14px}
+.leg{display:flex;align-items:center;gap:5px;color:#858585;font-size:11px}
+.leg-c{width:10px;height:10px;border:1.5px solid;border-radius:50%}
+#main-content{display:grid;grid-template-columns:repeat(2,minmax(320px,1fr));gap:14px;align-items:stretch}
+#main-content>.panel{min-height:100%;display:flex;flex-direction:column}
+.panel{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:10px}
+.slabel{margin-bottom:8px;color:#858585;font-size:10px;letter-spacing:.6px;text-transform:uppercase}
+#heap-svg,#tree-svg{display:block;width:100%;min-height:280px;flex:1}
+.edge{stroke:#54545a;stroke-width:2}
+.edge.zero{stroke:#569cd6}.edge.one{stroke:#ce9178}
+.edge-label{fill:#9cdcfe;font-size:10px;text-anchor:middle;font-weight:700}
+.node{fill:#2d2d30;stroke:#686870;stroke-width:2}
+.node.top,.node.current{fill:rgba(206,145,120,.2);stroke:#ce9178}
+.node.left{fill:rgba(86,156,214,.18);stroke:#569cd6}
+.node.right{fill:rgba(197,134,192,.18);stroke:#c586c0}
+.node.new{fill:rgba(78,201,176,.18);stroke:#4ec9b0}
+.node.swap{fill:rgba(181,206,168,.16);stroke:#b5cea8}
+.node.leaf{stroke:#858585}
+.node-text{fill:#f5f5f5;font-size:11px;font-weight:800;text-anchor:middle;dominant-baseline:middle}
+.freq-text{fill:#b5cea8;font-size:9px;text-anchor:middle;dominant-baseline:middle}
+.idx-text{fill:#858585;font-size:8px;text-anchor:middle}
+.empty{color:#555;font-size:12px}
+.state-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.state-card{min-height:74px;background:#1f1f1f;border:1px solid #3e3e42;border-radius:5px;padding:10px}
+.state-card.active{border-color:#ce9178;background:rgba(206,145,120,.13)}
+.state-card .key{margin-bottom:6px;color:#858585;font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+.state-card .val{color:#fff3b0;font-size:18px;font-weight:800;line-height:1.2;word-break:break-word}
+.state-card .hint{margin-top:3px;color:#9cdcfe;font-size:12px;line-height:1.35}
+.heap-array{display:grid;gap:5px;margin-top:12px;overflow-x:auto}
+.heap-row{display:grid;grid-template-columns:62px repeat(var(--cols),72px);gap:5px;align-items:center;min-width:max-content}
+.row-head{color:#858585;font-size:11px;text-align:right;padding-right:6px}
+.cell{height:40px;border:1px solid #3e3e42;border-radius:5px;background:#1f1f1f;display:flex;align-items:center;justify-content:center;color:#d4d4d4;font-weight:800;transition:.2s}
+.cell.idx{height:24px;color:#858585;background:transparent;border-color:transparent;font-weight:600}
+.cell.top,.cell.current{border-color:#ce9178;background:rgba(206,145,120,.2);color:#ffe8a3}
+.cell.left{border-color:#569cd6;background:rgba(86,156,214,.16);color:#c7e4ff}
+.cell.right{border-color:#c586c0;background:rgba(197,134,192,.15);color:#ffd6ff}
+.cell.new{border-color:#4ec9b0;background:rgba(78,201,176,.16);color:#c7fff2}
+.cell.swap{border-color:#b5cea8;background:rgba(181,206,168,.16);color:#e6ffd6}
+#code-panel{margin-top:14px;background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden}
+#code-title{background:#2d2d30;border-bottom:1px solid #3e3e42;color:#858585;font-size:11px;padding:5px 12px}
+#code-body{padding:6px 0;max-height:390px;overflow:auto}
+.cline{display:grid;grid-template-columns:42px 1fr;align-items:start;min-height:19px;border-left:3px solid transparent}
+.cline.hl{background:rgba(255,255,140,.08);border-left-color:#dcdcaa}
+.lnum{padding-right:10px;color:#555;text-align:right;user-select:none}
+.lcode{white-space:pre;color:#d4d4d4;font-size:12px;line-height:1.45}
+.indent1{box-shadow:inset 18px 0 0 rgba(255,255,255,.025)}
+.indent2{box-shadow:inset 18px 0 0 rgba(255,255,255,.025),inset 36px 0 0 rgba(255,255,255,.018)}
+.kw{color:#569cd6}.tp{color:#4ec9b0}.fn{color:#dcdcaa}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}.str{color:#ce9178}
+#nav{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px 0 4px;flex-wrap:wrap}
+.nbtn{min-width:88px;background:#2d2d30;border:1px solid #3e3e42;color:#d4d4d4;border-radius:4px;padding:7px 14px;font-family:inherit;cursor:pointer}
+.nbtn:hover:not(:disabled){background:#3a3a3d}
+.nbtn:disabled{opacity:.35;cursor:default}
+#progress{min-width:110px;text-align:center;color:#858585}
+@media (max-width:960px){
+  body{padding:12px}
+  #main-content{grid-template-columns:1fr}
+  .state-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .heap-row{grid-template-columns:54px repeat(var(--cols),64px)}
+}
+@media (max-width:560px){
+  .state-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<h1>Huffman Coding / 허프만 코딩 시각화</h1>
+<p class="sub">빈도가 작은 노드일수록 우선순위가 높은 <code>priority_queue</code>를 사용해 허프만 트리를 만드는 과정을 단계별로 보여줍니다. 예제 데이터는 <code>a:45, b:13, c:12, d:16, e:9, f:5</code>입니다.</p>
+
+<div id="tabs">
+  <button class="tab active" data-mode="all">전체 진행</button>
+  <button class="tab" data-mode="heap">Min-Heap 구성</button>
+  <button class="tab" data-mode="merge">노드 병합</button>
+</div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+
+<div id="legend">
+  <div class="leg"><span class="leg-c" style="border-color:#ce9178;background:rgba(206,145,120,.2)"></span>top/current</div>
+  <div class="leg"><span class="leg-c" style="border-color:#569cd6;background:rgba(86,156,214,.16)"></span>left / 0</div>
+  <div class="leg"><span class="leg-c" style="border-color:#c586c0;background:rgba(197,134,192,.16)"></span>right / 1</div>
+  <div class="leg"><span class="leg-c" style="border-color:#4ec9b0;background:rgba(78,201,176,.16)"></span>new/push</div>
+  <div class="leg"><span class="leg-c" style="border-color:#b5cea8;background:rgba(181,206,168,.16)"></span>heap swap</div>
+</div>
+
+<div id="main-content">
+  <section class="panel">
+    <div class="slabel">priority_queue Min-Heap / 빈도 기준 최소 힙</div>
+    <svg id="heap-svg" viewBox="0 0 640 280" role="img" aria-label="min heap"></svg>
+    <div id="heap-array" class="heap-array"></div>
+  </section>
+  <section class="panel">
+    <div class="slabel">Main Huffman Tree / 전체 메인 트리</div>
+    <svg id="tree-svg" viewBox="0 0 640 280" role="img" aria-label="main huffman tree"></svg>
+  </section>
+</div>
+
+<section class="state-grid">
+  <div class="state-card active"><div class="key">Operation</div><div id="op" class="val">-</div><div id="op-hint" class="hint">-</div></div>
+  <div class="state-card"><div class="key">Heap Size</div><div id="heap-size" class="val">0</div><div class="hint">while 조건: heap.size() != 1</div></div>
+  <div class="state-card"><div class="key">Selected</div><div id="selected" class="val">-</div><div id="selected-hint" class="hint">-</div></div>
+</section>
+
+<section id="code-panel">
+  <div id="code-title">HuffmanCoding 핵심 코드</div>
+  <div id="code-body"></div>
+</section>
+
+<div id="nav">
+  <button id="first" class="nbtn">Home</button>
+  <button id="prev" class="nbtn">← 이전</button>
+  <button id="play" class="nbtn">재생</button>
+  <span id="progress"></span>
+  <button id="next" class="nbtn">다음 →</button>
+  <button id="last" class="nbtn">End</button>
+</div>
+
+<script>
+const DATA = [
+  {data:'a', freq:45}, {data:'b', freq:13}, {data:'c', freq:12},
+  {data:'d', freq:16}, {data:'e', freq:9}, {data:'f', freq:5}
+];
+
+const CODE = [
+  ['struct Compare',0],
+  ['{',0],
+  ['    bool operator()(Node* l, Node* r)',1],
+  ['    {',1],
+  ['        return l->freq > r->freq;',2],
+  ['    }',1],
+  ['};',0],
+  ['',0],
+  ['priority_queue<Node*, vector<Node*>, Compare> heap;',0],
+  ['for (int i = 0; i < data.size(); ++i)',0],
+  ['    heap.push(new Node{ string(1, data[i]), freq[i] });',1],
+  ['',0],
+  ['while (heap.size() != 1)',0],
+  ['{',0],
+  ['    left = heap.top(); heap.pop();',1],
+  ['    right = heap.top(); heap.pop();',1],
+  ['    string new_data = left->data + right->data;',1],
+  ['    int new_freq = left->freq + right->freq;',1],
+  ['    top = new Node{ new_data, new_freq };',1],
+  ['    top->left = left;',1],
+  ['    top->right = right;',1],
+  ['    heap.push(top);',1],
+  ['}',0]
+];
+
+const LINE = {
+  compare:5, heapDecl:9, pushLoop:10, push:11, while:13, left:15, right:16,
+  newData:17, newFreq:18, newNode:19, setLeft:20, setRight:21, pushTop:22,
+};
+
+let nextId = 1;
+function makeNode(data, freq, left=null, right=null){
+  return {id:nextId++, data, freq, left, right};
+}
+function label(node){ return node ? `${node.data}:${node.freq}` : '-'; }
+function cloneHeap(heap){ return heap.slice(); }
+function compareNode(a,b){
+  if (a.freq !== b.freq) return a.freq - b.freq;
+  return a.data.localeCompare(b.data);
+}
+
+function heapPush(heap, node, steps, ctx){
+  heap.push(node);
+  let idx = heap.length - 1;
+  addStep(steps,{...ctx, heap, line:ctx.line ?? LINE.push, op:`push ${label(node)}`, desc:`heap.push(<strong>${label(node)}</strong>) : 새 노드를 힙의 마지막 위치에 추가합니다.`, marks:{[idx]:'new'}, focus:node});
+  while (idx > 0) {
+    const parent = Math.floor((idx - 1) / 2);
+    addStep(steps,{...ctx, heap, line:LINE.compare, op:'Compare', desc:`부모 <strong>${label(heap[parent])}</strong>와 자식 <strong>${label(heap[idx])}</strong>를 비교합니다. Compare는 <code>l->freq > r->freq</code>이므로 빈도가 작은 쪽이 위로 올라갑니다.`, marks:{[parent]:'current',[idx]:'new'}, focus:heap[idx]});
+    if (compareNode(heap[idx], heap[parent]) >= 0) break;
+    [heap[parent], heap[idx]] = [heap[idx], heap[parent]];
+    addStep(steps,{...ctx, heap, line:LINE.compare, op:'heap swap', desc:`자식의 빈도가 더 작아서 부모와 교환합니다. 이제 <strong>${label(heap[parent])}</strong>가 더 위에 있습니다.`, marks:{[parent]:'swap',[idx]:'swap'}, focus:heap[parent]});
+    idx = parent;
+  }
+}
+
+function heapPop(heap, steps, ctx){
+  const root = heap[0];
+  addStep(steps,{...ctx, heap, line:ctx.line, op:'heap.top()', desc:`heap.top()은 현재 최소 빈도 노드 <strong>${label(root)}</strong>입니다.`, marks:{0:ctx.pickClass || 'top'}, focus:root, selected:ctx.selected});
+  if (heap.length === 1) {
+    heap.pop();
+    addStep(steps,{...ctx, heap, line:ctx.line, op:'heap.pop()', desc:`top 노드 <strong>${label(root)}</strong>를 제거했습니다. 힙이 비었습니다.`, marks:{}, focus:root, selected:ctx.selected});
+    return root;
+  }
+  const last = heap.pop();
+  heap[0] = last;
+  addStep(steps,{...ctx, heap, line:ctx.line, op:'heap.pop()', desc:`마지막 노드 <strong>${label(last)}</strong>를 루트로 옮긴 뒤 아래로 내려 보내며 힙 조건을 복구합니다.`, marks:{0:'current'}, focus:last, selected:ctx.selected});
+  let idx = 0;
+  while (true) {
+    const left = idx * 2 + 1;
+    const right = idx * 2 + 2;
+    if (left >= heap.length) break;
+    let smallest = left;
+    if (right < heap.length) {
+      addStep(steps,{...ctx, heap, line:LINE.compare, op:'Compare children', desc:`왼쪽 자식 <strong>${label(heap[left])}</strong>와 오른쪽 자식 <strong>${label(heap[right])}</strong> 중 더 작은 빈도를 고릅니다.`, marks:{[idx]:'current',[left]:'left',[right]:'right'}, focus:heap[idx], selected:ctx.selected});
+      if (compareNode(heap[right], heap[left]) < 0) smallest = right;
+    }
+    addStep(steps,{...ctx, heap, line:LINE.compare, op:'Compare parent', desc:`현재 노드 <strong>${label(heap[idx])}</strong>와 더 작은 자식 <strong>${label(heap[smallest])}</strong>를 비교합니다.`, marks:{[idx]:'current',[smallest]:smallest === left ? 'left' : 'right'}, focus:heap[idx], selected:ctx.selected});
+    if (compareNode(heap[idx], heap[smallest]) <= 0) break;
+    [heap[idx], heap[smallest]] = [heap[smallest], heap[idx]];
+    addStep(steps,{...ctx, heap, line:LINE.compare, op:'heap swap', desc:`부모가 자식보다 커서 두 노드를 교환합니다.`, marks:{[idx]:'swap',[smallest]:'swap'}, focus:heap[idx], selected:ctx.selected});
+    idx = smallest;
+  }
+  return root;
+}
+
+function heapPopRaw(heap){
+  const root = heap[0];
+  if (heap.length === 1) {
+    heap.pop();
+    return root;
+  }
+
+  heap[0] = heap.pop();
+  let idx = 0;
+  while (true) {
+    const left = idx * 2 + 1;
+    const right = idx * 2 + 2;
+    if (left >= heap.length) break;
+
+    let smallest = left;
+    if (right < heap.length && compareNode(heap[right], heap[left]) < 0) {
+      smallest = right;
+    }
+
+    if (compareNode(heap[idx], heap[smallest]) <= 0) break;
+    [heap[idx], heap[smallest]] = [heap[smallest], heap[idx]];
+    idx = smallest;
+  }
+
+  return root;
+}
+
+function addStep(steps, data){
+  steps.push({
+    phase:data.phase,
+    op:data.op,
+    desc:data.desc,
+    heap:cloneHeap(data.heap || []),
+    marks:data.marks || {},
+    focus:data.focus || null,
+    selected:data.selected || {},
+    trace:[...(data.trace || [])],
+    codes:{...(data.codes || {})},
+    line:data.line,
+    codePath:data.codePath || '',
+    currentTree:data.currentTree || data.focus || null,
+    mainRoots:data.mainRoots ? [...data.mainRoots] : null
+  });
+}
+
+function buildSteps(){
+  const steps = [];
+  const heap = [];
+  const trace = [];
+  const codes = {};
+
+  addStep(steps,{phase:'heap', op:'Compare 준비', heap, trace, codes, line:LINE.compare, desc:'Compare는 <code>return l->freq > r->freq;</code>를 사용합니다. 따라서 <strong>freq가 작은 노드</strong>가 priority_queue의 top이 됩니다.'});
+  addStep(steps,{phase:'heap', op:'heap 선언', heap, trace, codes, line:LINE.heapDecl, desc:'빈도가 작을수록 우선순위가 높은 <strong>priority_queue&lt;Node*, vector&lt;Node*&gt;, Compare&gt;</strong>를 준비합니다.'});
+
+  DATA.forEach((entry, i) => {
+    const node = makeNode(entry.data, entry.freq);
+    addStep(steps,{phase:'heap', op:`입력 ${entry.data}`, heap, trace, codes, line:LINE.pushLoop, desc:`data[${i}] = <strong>${entry.data}</strong>, freq[${i}] = <strong>${entry.freq}</strong>인 leaf Node를 만듭니다.`, focus:node, currentTree:node});
+    heapPush(heap, node, steps, {phase:'heap', trace, codes, line:LINE.push, currentTree:node});
+  });
+
+  addStep(steps,{
+    phase:'heap',
+    op:'1차 우선순위큐 완성',
+    heap,
+    trace,
+    codes,
+    line:LINE.push,
+    desc:'모든 문자 노드가 priority_queue에 들어갔습니다. 이 상태가 병합을 시작하기 전 <strong>1차 우선순위큐</strong>입니다.',
+    marks:{0:'top'},
+    focus:heap[0],
+    currentTree:heap[0]
+  });
+
+  while (heap.length !== 1) {
+    addStep(steps,{phase:'merge', op:'while 검사', heap, trace, codes, line:LINE.while, desc:`heap.size() = <strong>${heap.length}</strong>입니다. 1이 아니므로 가장 작은 두 노드를 꺼내 병합합니다.`, currentTree:heap[0]});
+    const left = heapPopRaw(heap);
+    const right = heapPopRaw(heap);
+    addStep(steps,{
+      phase:'merge',
+      op:'left/right 동시 선택',
+      heap,
+      trace,
+      codes,
+      line:LINE.left,
+      desc:`priority_queue에서 빈도가 가장 작은 두 노드를 한 단계로 꺼냅니다. left = <strong>${label(left)}</strong>, right = <strong>${label(right)}</strong>입니다.`,
+      selected:{left,right},
+      focus:left,
+      currentTree:left
+    });
+
+    const newData = left.data + right.data;
+    const newFreq = left.freq + right.freq;
+    addStep(steps,{phase:'merge', op:'new_data', heap, trace, codes, line:LINE.newData, desc:`new_data = left->data + right->data = <strong>${newData}</strong>`, selected:{left,right}, focus:left, currentTree:left});
+    addStep(steps,{phase:'merge', op:'new_freq', heap, trace, codes, line:LINE.newFreq, desc:`new_freq = left->freq + right->freq = <strong>${left.freq} + ${right.freq} = ${newFreq}</strong>`, selected:{left,right}, focus:right, currentTree:right});
+    const top = makeNode(newData, newFreq);
+    addStep(steps,{phase:'merge', op:'top 생성', heap, trace, codes, line:LINE.newNode, desc:`top = new Node{ <strong>${newData}</strong>, <strong>${newFreq}</strong> }를 생성합니다.`, selected:{left,right,top}, focus:top, currentTree:top});
+    top.left = left;
+    addStep(steps,{phase:'merge', op:'top->left', heap, trace, codes, line:LINE.setLeft, desc:`top->left = left 입니다. 왼쪽 간선은 허프만 코드에서 <strong>0</strong>을 의미합니다.`, selected:{left,right,top}, focus:top, currentTree:top});
+    top.right = right;
+    addStep(steps,{phase:'merge', op:'top->right', heap, trace, codes, line:LINE.setRight, desc:`top->right = right 입니다. 오른쪽 간선은 허프만 코드에서 <strong>1</strong>을 의미합니다.`, selected:{left,right,top}, focus:top, currentTree:top});
+    heapPush(heap, top, steps, {phase:'merge', trace, codes, line:LINE.pushTop, currentTree:top, selected:{left,right,top}});
+  }
+
+  const root = heap[0];
+  addStep(steps,{phase:'merge', op:'완성', heap, trace, codes, line:LINE.while, desc:'heap.size()가 1이 되었으므로 병합 반복이 끝났습니다. heap.top()이 완성된 허프만 트리의 root입니다.', focus:root, currentTree:root});
+  return steps;
+}
+
+const STEPS = buildSteps();
+let mode = 'all';
+let index = 0;
+let playing = false;
+let timer = null;
+
+function visibleSteps(){
+  return mode === 'all' ? STEPS : STEPS.filter(step => step.phase === mode);
+}
+
+function escapeHtml(text){
+  return text.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function colorize(text){
+  let safe = escapeHtml(text);
+  safe = safe.replace(/\b(struct|bool|operator|return|void|if|while|for|int|string|new|nullptr)\b/g,'<span class="kw">$1</span>');
+  safe = safe.replace(/\b(Node|Compare|HuffmanCoding|priority_queue|vector)\b/g,'<span class="tp">$1</span>');
+  safe = safe.replace(/\b(heap|left|right|top|new_data|new_freq|freq|data|root|str)\b/g,'<span class="fn">$1</span>');
+  safe = safe.replace(/\b(\d+)\b/g,'<span class="num">$1</span>');
+  safe = safe.replace(/(\/\/.*)$/,'<span class="cm">$1</span>');
+  return safe;
+}
+
+function renderCode(activeLine){
+  const body = document.getElementById('code-body');
+  body.innerHTML = '';
+  CODE.forEach(([text, indent], i) => {
+    const row = document.createElement('div');
+    row.className = `cline ${i + 1 === activeLine ? 'hl' : ''}`;
+    const num = document.createElement('div');
+    num.className = 'lnum';
+    num.textContent = i + 1;
+    const code = document.createElement('div');
+    code.className = `lcode indent${Math.min(indent, 2)}`;
+    code.innerHTML = colorize(text);
+    row.append(num, code);
+    body.append(row);
+  });
+}
+
+function heapPositions(count){
+  const pos = {};
+  const levels = Math.max(1, Math.floor(Math.log2(Math.max(1,count))) + 1);
+  for (let i = 0; i < count; i++) {
+    const level = Math.floor(Math.log2(i + 1));
+    const start = 2 ** level - 1;
+    const offset = i - start;
+    const nodes = 2 ** level;
+    pos[i] = [640 * (offset + 1) / (nodes + 1), 30 + level * (205 / Math.max(1, levels - 1))];
+  }
+  return pos;
+}
+
+function renderHeap(step){
+  const svg = document.getElementById('heap-svg');
+  svg.innerHTML = '';
+  const ns = 'http://www.w3.org/2000/svg';
+  const heap = step.heap;
+  const pos = heapPositions(heap.length);
+  for (let i = 1; i < heap.length; i++) {
+    const p = Math.floor((i - 1) / 2);
+    const line = document.createElementNS(ns,'line');
+    line.setAttribute('x1', pos[p][0]);
+    line.setAttribute('y1', pos[p][1]);
+    line.setAttribute('x2', pos[i][0]);
+    line.setAttribute('y2', pos[i][1]);
+    line.setAttribute('class','edge');
+    svg.append(line);
+  }
+  heap.forEach((node, i) => drawNode(svg, pos[i][0], pos[i][1], node, step.marks[i] || '', `heap[${i + 1}]`));
+  if (!heap.length) drawEmpty(svg, 'heap이 비어 있습니다.');
+  renderHeapArray(step);
+}
+
+function drawNode(svg, x, y, node, cls, idxText){
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns,'g');
+  const circle = document.createElementNS(ns,'circle');
+  circle.setAttribute('cx', x);
+  circle.setAttribute('cy', y);
+  circle.setAttribute('r', 18);
+  circle.setAttribute('class', `node ${!node.left && !node.right ? 'leaf' : ''} ${cls}`);
+  const data = document.createElementNS(ns,'text');
+  data.setAttribute('x', x);
+  data.setAttribute('y', y - 4);
+  data.setAttribute('class','node-text');
+  data.textContent = node.data;
+  const freq = document.createElementNS(ns,'text');
+  freq.setAttribute('x', x);
+  freq.setAttribute('y', y + 9);
+  freq.setAttribute('class','freq-text');
+  freq.textContent = node.freq;
+  const idx = document.createElementNS(ns,'text');
+  idx.setAttribute('x', x);
+  idx.setAttribute('y', y + 30);
+  idx.setAttribute('class','idx-text');
+  idx.textContent = idxText || '';
+  g.append(circle, data, freq, idx);
+  svg.append(g);
+}
+
+function drawEmpty(svg, text){
+  const ns = 'http://www.w3.org/2000/svg';
+  const label = document.createElementNS(ns,'text');
+  label.setAttribute('x', 320);
+  label.setAttribute('y', 165);
+  label.setAttribute('fill', '#777');
+  label.setAttribute('text-anchor', 'middle');
+  label.textContent = text;
+  svg.append(label);
+}
+
+function renderHeapArray(step){
+  const root = document.getElementById('heap-array');
+  root.innerHTML = '';
+  const cols = Math.max(step.heap.length, 1);
+  root.style.setProperty('--cols', cols);
+  const idxRow = document.createElement('div');
+  idxRow.className = 'heap-row';
+  idxRow.append(rowHead('Index'));
+  for (let i = 0; i < cols; i++) idxRow.append(cell(step.heap[i] ? String(i + 1) : '-', 'idx'));
+  const valRow = document.createElement('div');
+  valRow.className = 'heap-row';
+  valRow.append(rowHead('Node'));
+  for (let i = 0; i < cols; i++) valRow.append(cell(step.heap[i] ? label(step.heap[i]) : 'empty', step.marks[i] || ''));
+  root.append(idxRow, valRow);
+}
+
+function rowHead(text){
+  const el = document.createElement('div');
+  el.className = 'row-head';
+  el.textContent = text;
+  return el;
+}
+function cell(text, cls){
+  const el = document.createElement('div');
+  el.className = `cell ${cls || ''}`;
+  el.textContent = text;
+  return el;
+}
+
+function layoutTree(root, xStart = 54, width = 532, yStart = 30, yGap = 45){
+  const leaves = [];
+  function collect(node){
+    if (!node) return;
+    if (!node.left && !node.right) leaves.push(node);
+    else { collect(node.left); collect(node.right); }
+  }
+  collect(root);
+  const xById = {};
+  leaves.forEach((leaf, i) => { xById[leaf.id] = xStart + i * (width / Math.max(1, leaves.length - 1)); });
+  function assign(node, depth=0){
+    if (!node) return null;
+    const left = assign(node.left, depth + 1);
+    const right = assign(node.right, depth + 1);
+    let x = xById[node.id];
+    if (x === undefined) x = left && right ? (left.x + right.x) / 2 : xStart + width / 2;
+    const p = {x, y:yStart + depth * yGap};
+    xById[node.id] = x;
+    return p;
+  }
+  const positions = {};
+  function fill(node, depth=0){
+    if (!node) return;
+    assign(root);
+    positions[node.id] = {x:xById[node.id], y:yStart + depth * yGap};
+    fill(node.left, depth + 1);
+    fill(node.right, depth + 1);
+  }
+  fill(root);
+  return positions;
+}
+
+function drawTree(svg, root, step, xStart = 54, width = 532, yStart = 30, yGap = 45){
+  if (!root) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  const pos = layoutTree(root, xStart, width, yStart, yGap);
+  function drawEdges(node){
+    if (!node) return;
+    for (const [child, cls, bit] of [[node.left,'zero','0'],[node.right,'one','1']]) {
+      if (!child) continue;
+      const p = pos[node.id], c = pos[child.id];
+      const line = document.createElementNS(ns,'line');
+      line.setAttribute('x1', p.x);
+      line.setAttribute('y1', p.y);
+      line.setAttribute('x2', c.x);
+      line.setAttribute('y2', c.y);
+      line.setAttribute('class', `edge ${cls}`);
+      svg.append(line);
+      const label = document.createElementNS(ns,'text');
+      label.setAttribute('x', (p.x + c.x) / 2);
+      label.setAttribute('y', (p.y + c.y) / 2 - 3);
+      label.setAttribute('class','edge-label');
+      label.textContent = bit;
+      svg.append(label);
+      drawEdges(child);
+    }
+  }
+  function drawNodes(node){
+    if (!node) return;
+    let cls = '';
+    if (step.selected.left && node.id === step.selected.left.id) cls = 'left';
+    if (step.selected.right && node.id === step.selected.right.id) cls = 'right';
+    if (step.selected.top && node.id === step.selected.top.id) cls = 'new';
+    if (step.focus && node.id === step.focus.id) cls = cls || 'current';
+    drawNode(svg, pos[node.id].x, pos[node.id].y, node, cls, '');
+    drawNodes(node.left);
+    drawNodes(node.right);
+  }
+  drawEdges(root);
+  drawNodes(root);
+}
+
+function mainRootsFor(step){
+  const roots = [...step.heap];
+  if (step.selected.top) roots.push(step.selected.top);
+  else {
+    if (step.selected.left) roots.push(step.selected.left);
+    if (step.selected.right) roots.push(step.selected.right);
+  }
+  if (!roots.length && step.currentTree) roots.push(step.currentTree);
+
+  const seen = new Set();
+  return roots.filter(node => {
+    if (!node || seen.has(node.id)) return false;
+    seen.add(node.id);
+    return true;
+  });
+}
+
+function renderMainTree(step){
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+  const roots = mainRootsFor(step);
+  if (!roots.length) {
+    drawEmpty(svg, '전체 트리가 아직 비어 있습니다.');
+    return;
+  }
+
+  const gap = 12;
+  const rootWidth = (640 - gap * (roots.length + 1)) / roots.length;
+  roots.forEach((root, i) => {
+    const xStart = gap + i * (rootWidth + gap) + 18;
+    drawTree(svg, root, step, xStart, Math.max(20, rootWidth - 36), 30, 42);
+  });
+}
+
+function renderState(step, pos, total){
+  document.getElementById('step-counter').textContent = `Step ${pos + 1} / ${total}`;
+  document.getElementById('step-desc').innerHTML = step.desc;
+  document.getElementById('op').textContent = step.op || '-';
+  document.getElementById('op-hint').textContent = step.codePath ? `현재 코드 prefix: ${step.codePath}` : '빈도가 작은 노드가 먼저 나옵니다.';
+  document.getElementById('heap-size').textContent = step.heap.length;
+  const selected = [];
+  if (step.selected.left) selected.push(`left=${label(step.selected.left)}`);
+  if (step.selected.right) selected.push(`right=${label(step.selected.right)}`);
+  if (step.selected.top) selected.push(`top=${label(step.selected.top)}`);
+  document.getElementById('selected').textContent = selected.length ? selected.join(' ') : (step.focus ? label(step.focus) : '-');
+  document.getElementById('selected-hint').textContent = '현재 선택된 노드';
+}
+
+function render(){
+  const steps = visibleSteps();
+  if (index >= steps.length) index = steps.length - 1;
+  if (index < 0) index = 0;
+  const step = steps[index];
+  renderState(step, index, steps.length);
+  renderHeap(step);
+  renderMainTree(step);
+  renderCode(step.line);
+  document.getElementById('progress').textContent = `${index + 1} / ${steps.length}`;
+  document.getElementById('first').disabled = index === 0;
+  document.getElementById('prev').disabled = index === 0;
+  document.getElementById('next').disabled = index === steps.length - 1;
+  document.getElementById('last').disabled = index === steps.length - 1;
+}
+
+function move(delta){
+  const steps = visibleSteps();
+  index = Math.max(0, Math.min(steps.length - 1, index + delta));
+  render();
+}
+function setMode(nextMode){
+  mode = nextMode;
+  index = 0;
+  stop();
+  document.querySelectorAll('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+  render();
+}
+function play(){
+  if (playing) return stop();
+  playing = true;
+  document.getElementById('play').textContent = '정지';
+  timer = setInterval(() => {
+    if (index >= visibleSteps().length - 1) return stop();
+    move(1);
+  }, 950);
+}
+function stop(){
+  playing = false;
+  document.getElementById('play').textContent = '재생';
+  if (timer) clearInterval(timer);
+  timer = null;
+}
+
+document.getElementById('first').addEventListener('click', () => { index = 0; render(); });
+document.getElementById('prev').addEventListener('click', () => move(-1));
+document.getElementById('next').addEventListener('click', () => move(1));
+document.getElementById('last').addEventListener('click', () => { index = visibleSteps().length - 1; render(); });
+document.getElementById('play').addEventListener('click', play);
+document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+document.addEventListener('keydown', event => {
+  if (event.target && ['INPUT','TEXTAREA','SELECT','BUTTON'].includes(event.target.tagName)) return;
+  if (event.key === 'ArrowLeft') move(-1);
+  if (event.key === 'ArrowRight') move(1);
+  if (event.key === 'Home') { index = 0; render(); }
+  if (event.key === 'End') { index = visibleSteps().length - 1; render(); }
+  if (event.code === 'Space') { event.preventDefault(); play(); }
+});
+
+render();
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>
