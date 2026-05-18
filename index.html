@@ -215,6 +215,17 @@
       margin-top: 12px;
     }
 
+    .chapter-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .chapter-list > details {
+      border-radius: 14px;
+      box-shadow: none;
+    }
+
     .nested details {
       background: linear-gradient(180deg, #ece8dd, #e1dbc9);
       border-radius: 14px;
@@ -289,12 +300,27 @@
       <div class="badge">강의 목차별 정리</div>
       <h1>Algorithm Visualization Index / 알고리즘 시각화 목차</h1>
       <p class="sub">
-        각 강의 목차를 접히는 카드 형태로 정리했습니다. 기본 상태에서는 내용이 보이지 않고, 챕터를 열면 해당 HTML 시각화 파일로 바로 이동할 수 있습니다.
+        상위 폴더 Algorithms_01 아래에 각 강의 목차를 접히는 카드 형태로 정리했습니다. 기본 상태에서는 내용이 보이지 않고, 폴더와 챕터를 열면 해당 HTML 시각화 파일로 바로 이동할 수 있습니다.
         하위 폴더도 별도 카드로 분리해 구조를 유지했습니다.
       </p>
     </header>
 
     <section class="accordion">
+      <details>
+        <summary class="folder-summary">
+          <div class="summary-left">
+            <span class="summary-icon">›</span>
+            <div>
+              <span class="folder-chip">Folder / 상위 폴더</span>
+              <h2 class="summary-title">Algorithms_01 / 알고리즘 01</h2>
+              <p class="summary-meta">02번부터 14번까지의 알고리즘 시각화 챕터를 한 폴더 구조로 정리</p>
+            </div>
+          </div>
+          <span class="count">37 files</span>
+        </summary>
+        <div class="folder-body">
+          <p>루트에 흩어져 있던 번호별 챕터 폴더를 Algorithms_01 아래로 묶고, 실제 파일 경로와 같은 계층으로 목차를 구성했습니다.</p>
+          <div class="chapter-list">
       <details>
         <summary class="chapter-summary">
           <div class="summary-left">
@@ -310,7 +336,7 @@
         <div class="chapter-body">
           <p>정렬의 단계별 진행을 보면서 연산 흐름과 반복 구조를 분석하기 좋은 자료입니다.</p>
           <div class="links">
-            <a href="./02_asymptotic_analysis/insertion_sort_visualizer.html">Insertion Sort / 삽입 정렬</a>
+            <a href="./Algorithms_01/02_asymptotic_analysis/insertion_sort_visualizer.html">Insertion Sort / 삽입 정렬</a>
           </div>
         </div>
       </details>
@@ -330,7 +356,7 @@
         <div class="chapter-body">
           <p>Median of Medians 알고리즘의 그룹 분할, 피벗 선택, 재귀 흐름을 단계별로 확인할 수 있습니다.</p>
           <div class="links">
-            <a href="./04_median_and_selection/median_of_medians.html">Median of Medians / 중간값들의 중간값</a>
+            <a href="./Algorithms_01/04_median_and_selection/median_of_medians.html">Median of Medians / 중간값들의 중간값</a>
           </div>
         </div>
       </details>
@@ -350,7 +376,7 @@
         <div class="chapter-body">
           <p>데이터가 버킷으로 분산되고 다시 정렬되어 결합되는 전체 흐름을 한 번에 볼 수 있습니다.</p>
           <div class="links">
-            <a href="./06_bucket_sort/bucket_sort.html">Bucket Sort / 버킷 정렬</a>
+            <a href="./Algorithms_01/06_bucket_sort/bucket_sort.html">Bucket Sort / 버킷 정렬</a>
           </div>
         </div>
       </details>
@@ -370,8 +396,8 @@
         <div class="chapter-body">
           <p>2-3 트리와 AVL 트리 같은 보조 개념을 포함하고, 하위 폴더에서는 Left-Leaning Red-Black Tree 동작을 세부 단계로 나눠 제공합니다.</p>
           <div class="links">
-            <a href="./07_red_black_tree/2-3_Tree_node.html">2-3 Tree / 2-3 트리</a>
-            <a href="./07_red_black_tree/avl_tree_visualization.html">AVL Tree / AVL 트리</a>
+            <a href="./Algorithms_01/07_red_black_tree/2-3_Tree_node.html">2-3 Tree / 2-3 트리</a>
+            <a href="./Algorithms_01/07_red_black_tree/avl_tree_visualization.html">AVL Tree / AVL 트리</a>
           </div>
 
           <div class="nested">
@@ -390,15 +416,15 @@
               <div class="folder-body">
                 <p>삽입 균형 조정, `moveRedLeft`, `moveRedRight`, 최소/최대 삭제 보정을 각각 독립적으로 확인할 수 있습니다.</p>
                 <div class="links">
-                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTreeRotationFlip.html">Rotation Flip / 회전과 색 뒤집기</a>
-                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTreeInsertBalance.html">Insert Balance / 삽입 균형 조정</a>
-                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/MoveRedLeft.html">MoveRedLeft / 왼쪽으로 빨강 이동</a>
-                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/MoveRedRight.html">MoveRedRight / 오른쪽으로 빨강 이동</a>
-                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_Delete.html">Delete / 삭제</a>
-                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMin.html">DeleteMin / 최소 삭제</a>
-                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMin_micro.html">DeleteMin Micro / 최소 삭제 세부</a>
-                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMax.html">DeleteMax / 최대 삭제</a>
-                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMax_micro.html">DeleteMax Micro / 최대 삭제 세부</a>
+                  <a class="subtle" href="./Algorithms_01/07_red_black_tree/leftleaning_redblacktree/RedBlackTreeRotationFlip.html">Rotation Flip / 회전과 색 뒤집기</a>
+                  <a class="subtle" href="./Algorithms_01/07_red_black_tree/leftleaning_redblacktree/RedBlackTreeInsertBalance.html">Insert Balance / 삽입 균형 조정</a>
+                  <a class="subtle" href="./Algorithms_01/07_red_black_tree/leftleaning_redblacktree/MoveRedLeft.html">MoveRedLeft / 왼쪽으로 빨강 이동</a>
+                  <a class="subtle" href="./Algorithms_01/07_red_black_tree/leftleaning_redblacktree/MoveRedRight.html">MoveRedRight / 오른쪽으로 빨강 이동</a>
+                  <a class="subtle" href="./Algorithms_01/07_red_black_tree/leftleaning_redblacktree/RedBlackTree_Delete.html">Delete / 삭제</a>
+                  <a class="subtle" href="./Algorithms_01/07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMin.html">DeleteMin / 최소 삭제</a>
+                  <a class="subtle" href="./Algorithms_01/07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMin_micro.html">DeleteMin Micro / 최소 삭제 세부</a>
+                  <a class="subtle" href="./Algorithms_01/07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMax.html">DeleteMax / 최대 삭제</a>
+                  <a class="subtle" href="./Algorithms_01/07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMax_micro.html">DeleteMax Micro / 최대 삭제 세부</a>
                 </div>
               </div>
             </details>
@@ -421,8 +447,8 @@
         <div class="chapter-body">
           <p>Separate Chaining 구조와 문자열 기반 예제를 함께 모아 해싱 개념을 빠르게 비교할 수 있습니다.</p>
           <div class="links">
-            <a href="./08_hashing/SperateChaining.html">Separate Chaining / 분리 연결법</a>
-            <a href="./08_hashing/RomanNumeral.html">Roman Numeral / 로마 숫자</a>
+            <a href="./Algorithms_01/08_hashing/SperateChaining.html">Separate Chaining / 분리 연결법</a>
+            <a href="./Algorithms_01/08_hashing/RomanNumeral.html">Roman Numeral / 로마 숫자</a>
           </div>
         </div>
       </details>
@@ -442,12 +468,12 @@
         <div class="chapter-body">
           <p>위상 정렬, DFS/BFS 경로 탐색, 문자열 그래프 DFS, DFS 기반 사이클 감지를 같은 챕터 아래에서 비교할 수 있습니다.</p>
           <div class="links">
-            <a href="./09_graph/topological_sort_vis.html">Queue Topological Sort / 큐 기반 위상 정렬</a>
-            <a href="./09_graph/DFS_topological_sort.html">DFS Topological Sort / DFS 기반 위상 정렬</a>
-            <a href="./09_graph/breadth_first_paths_vis.html">Breadth First Paths / BFS 최단 경로</a>
-            <a href="./09_graph/dfs_pathfinder_viz.html">DFS Path Finder / DFS 경로 탐색</a>
-            <a href="./09_graph/symbol_graph_dfs_vis.html">SymbolGraph DFS / 심볼 그래프 DFS</a>
-            <a href="./09_graph/cycle_detection_dfs_vis.html">DFS Cycle Detection / DFS 사이클 감지</a>
+            <a href="./Algorithms_01/09_graph/topological_sort_vis.html">Queue Topological Sort / 큐 기반 위상 정렬</a>
+            <a href="./Algorithms_01/09_graph/DFS_topological_sort.html">DFS Topological Sort / DFS 기반 위상 정렬</a>
+            <a href="./Algorithms_01/09_graph/breadth_first_paths_vis.html">Breadth First Paths / BFS 최단 경로</a>
+            <a href="./Algorithms_01/09_graph/dfs_pathfinder_viz.html">DFS Path Finder / DFS 경로 탐색</a>
+            <a href="./Algorithms_01/09_graph/symbol_graph_dfs_vis.html">SymbolGraph DFS / 심볼 그래프 DFS</a>
+            <a href="./Algorithms_01/09_graph/cycle_detection_dfs_vis.html">DFS Cycle Detection / DFS 사이클 감지</a>
           </div>
         </div>
       </details>
@@ -467,9 +493,9 @@
         <div class="chapter-body">
           <p>현재 포함된 자료는 무방향 그래프의 연결 요소, 브루트포스 방식의 강한 연결 요소, 코사라주 알고리듬 시각화를 함께 포함합니다.</p>
           <div class="links">
-            <a href="./10_strongly_connected_components/connected_components_vis.html">Connected Components / 연결 요소</a>
-            <a href="./10_strongly_connected_components/StrongComponents(BruteForce).html">Strong Components (Brute Force) / 브루트포스 강한 연결 요소</a>
-            <a href="./10_strongly_connected_components/KosarajuStrongComponents.html">Kosaraju Strong Components / 코사라주 강한 연결 요소</a>
+            <a href="./Algorithms_01/10_strongly_connected_components/connected_components_vis.html">Connected Components / 연결 요소</a>
+            <a href="./Algorithms_01/10_strongly_connected_components/StrongComponents(BruteForce).html">Strong Components (Brute Force) / 브루트포스 강한 연결 요소</a>
+            <a href="./Algorithms_01/10_strongly_connected_components/KosarajuStrongComponents.html">Kosaraju Strong Components / 코사라주 강한 연결 요소</a>
           </div>
         </div>
       </details>
@@ -489,8 +515,8 @@
         <div class="chapter-body">
           <p>현재 포함된 자료는 가중 그래프 알고리듬에서 자주 쓰는 인덱스 최소 우선순위 큐와 다익스트라 최단 경로 시각화입니다.</p>
           <div class="links">
-            <a href="./11_weighted_graphs/index_min_pq_vis.html">IndexMinPQ / 인덱스 최소 우선순위 큐</a>
-            <a href="./11_weighted_graphs/dijkstra_shortest_paths_vis.html">Dijkstra Shortest Paths / 다익스트라 최단 경로</a>
+            <a href="./Algorithms_01/11_weighted_graphs/index_min_pq_vis.html">IndexMinPQ / 인덱스 최소 우선순위 큐</a>
+            <a href="./Algorithms_01/11_weighted_graphs/dijkstra_shortest_paths_vis.html">Dijkstra Shortest Paths / 다익스트라 최단 경로</a>
           </div>
         </div>
       </details>
@@ -510,10 +536,10 @@
         <div class="chapter-body">
           <p>철근 잘라서 팔기 문제, Bellman-Ford 예제, 플로이드-워셜 모든 쌍 최단 경로, 환율 기반 차익 거래 탐지를 함께 비교할 수 있도록 묶어 두었습니다.</p>
           <div class="links">
-            <a href="./12_dynamic_programming/rod_cutting_problem.html">Rod Cutting / 철근 잘라서 팔기 문제</a>
-            <a href="./12_dynamic_programming/bellman_ford_vis.html">Bellman-Ford / 벨만-포드</a>
-            <a href="./12_dynamic_programming/floyd_bellman_all_pairs_vis.html">Floyd-Warshall & Repeating Bellman-Ford / 모든 쌍 최단 경로</a>
-            <a href="./12_dynamic_programming/arbitrage_detection_vis.html">Arbitrage Detection / 차익 거래 탐지</a>
+            <a href="./Algorithms_01/12_dynamic_programming/rod_cutting_problem.html">Rod Cutting / 철근 잘라서 팔기 문제</a>
+            <a href="./Algorithms_01/12_dynamic_programming/bellman_ford_vis.html">Bellman-Ford / 벨만-포드</a>
+            <a href="./Algorithms_01/12_dynamic_programming/floyd_bellman_all_pairs_vis.html">Floyd-Warshall & Repeating Bellman-Ford / 모든 쌍 최단 경로</a>
+            <a href="./Algorithms_01/12_dynamic_programming/arbitrage_detection_vis.html">Arbitrage Detection / 차익 거래 탐지</a>
           </div>
         </div>
       </details>
@@ -533,10 +559,10 @@
         <div class="chapter-body">
           <p>최장 공통 부분 수열, 배낭 문제, 트리 최대 독립 집합을 통해 문자열, 선택 최적화, 트리 동적 프로그래밍이 채워지는 과정을 단계별로 확인할 수 있습니다.</p>
           <div class="links">
-            <a href="./13_dynamic_programming_2/lcs_examples_vis.html">LCS Examples / 최장 공통 부분 수열</a>
-            <a href="./13_dynamic_programming_2/ZeroKnapsack.html">Zero-One Knapsack / 0-1 배낭 문제</a>
-            <a href="./13_dynamic_programming_2/UnboundedKnapsack.html">Unbounded Knapsack / 무한 배낭 문제</a>
-            <a href="./13_dynamic_programming_2/LargestIndependentSet.html">Largest Independent Set / 최대 독립 집합</a>
+            <a href="./Algorithms_01/13_dynamic_programming_2/lcs_examples_vis.html">LCS Examples / 최장 공통 부분 수열</a>
+            <a href="./Algorithms_01/13_dynamic_programming_2/ZeroKnapsack.html">Zero-One Knapsack / 0-1 배낭 문제</a>
+            <a href="./Algorithms_01/13_dynamic_programming_2/UnboundedKnapsack.html">Unbounded Knapsack / 무한 배낭 문제</a>
+            <a href="./Algorithms_01/13_dynamic_programming_2/LargestIndependentSet.html">Largest Independent Set / 최대 독립 집합</a>
           </div>
         </div>
       </details>
@@ -556,19 +582,23 @@
         <div class="chapter-body">
           <p>분할 가능 배낭 문제를 통해 가치/무게 비율 기준 정렬과 탐욕 선택이 진행되는 과정을 단계별로 확인할 수 있습니다.</p>
           <div class="links">
-            <a href="./14_greedy_algorithm/FractionKnapscak.html">Fractional Knapsack / 분할 가능 배낭 문제</a>
-            <a href="./14_greedy_algorithm/Activity%20Selection.html">Activity Selection / 활동 선택 문제</a>
+            <a href="./Algorithms_01/14_greedy_algorithm/FractionKnapscak.html">Fractional Knapsack / 분할 가능 배낭 문제</a>
+            <a href="./Algorithms_01/14_greedy_algorithm/Activity%20Selection.html">Activity Selection / 활동 선택 문제</a>
+          </div>
+        </div>
+      </details>
           </div>
         </div>
       </details>
     </section>
 
     <p class="footnote">
-      모든 카드와 하위 카드는 기본적으로 접혀 있습니다. 카드 제목은 영어와 한국어를 함께 표기했고, 실제 파일 경로는 URL 안정성을 위해 영문 폴더명을 유지했습니다.
+      모든 폴더 카드와 하위 카드는 기본적으로 접혀 있습니다. 카드 제목은 영어와 한국어를 함께 표기했고, 실제 파일 경로는 URL 안정성을 위해 영문 폴더명을 유지했습니다.
     </p>
   </main>
 <script src="./shared/viewer-controls.js"></script>
 </body>
 </html>
+
 
 

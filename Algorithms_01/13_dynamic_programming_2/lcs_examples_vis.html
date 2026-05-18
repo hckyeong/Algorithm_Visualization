@@ -1,0 +1,543 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LCS Examples / 최장 공통 부분 수열</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:16px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
+.sub{max-width:1180px;color:#c9c9c9;line-height:1.65;margin-bottom:10px}
+#tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tab-btn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:7px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px}
+.tab-btn.active{background:rgba(86,156,214,.14);border-color:#569cd6;color:#9cdcfe}
+#step-counter{font-size:11px;color:#858585;margin-top:8px}
+#step-desc{margin-top:5px;padding:10px 12px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0;line-height:1.65;min-height:68px;display:flex;flex-direction:column;gap:6px}
+.desc-main{font-size:13px;color:#e0e0e0}
+.desc-formula{font-size:12px;color:#dcdcaa;word-break:break-word}
+.desc-formula code{font-family:inherit;color:#9cdcfe}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#left-panel{flex:1 1 760px;min-width:min(100%,760px);display:flex;flex-direction:column;gap:10px}
+#right-panel{flex:1 1 390px;min-width:min(100%,390px);display:flex;flex-direction:column;gap:10px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.string-row{display:grid;grid-template-columns:42px 1fr;gap:8px;align-items:center;margin:6px 0}
+.str-name{font-size:12px;color:#858585;text-align:right}
+.chars{display:flex;gap:5px;flex-wrap:wrap}
+.char-cell{width:34px;min-height:40px;border:1px solid #343434;border-radius:5px;background:#1f1f1f;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .2s}
+.char-cell.used{border-color:#315f86;background:rgba(86,156,214,.08)}
+.char-cell.active{border-color:#f7b267;background:rgba(247,178,103,.18);color:#ffd8aa}
+.char-cell.match{border-color:#4ec9b0;background:rgba(78,201,176,.14);color:#b7fff1}
+.char-v{font-size:14px;font-weight:700;line-height:1}
+.char-i{font-size:10px;color:#858585;margin-top:4px}
+.table-wrap{overflow:auto;max-width:100%;padding-bottom:2px}
+.dp-table{border-collapse:separate;border-spacing:2px;width:100%;min-width:calc(var(--cols) * 34px);table-layout:fixed}
+.dp-table th{height:20px;text-align:center;color:#858585;font-size:8px;font-weight:400}
+.dp-table td{height:28px;text-align:center;border:1px solid #343434;border-radius:3px;background:#1f1f1f;color:#d4d4d4;font-size:10px;font-weight:700;transition:all .2s;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dp-table.lcs-table td{font-size:9px;font-weight:600}
+.dp-table td.zero{color:#666}
+.dp-table td.empty-cell{color:#555}
+.dp-table td.current{border-color:#f7b267;background:rgba(247,178,103,.16);color:#ffd8aa}
+.dp-table td.diag{border-color:#4ec9b0;background:rgba(78,201,176,.12);color:#b7fff1}
+.dp-table td.up,.dp-table td.left{border-color:#dcdcaa;background:rgba(220,220,170,.12);color:#dcdcaa}
+.dp-table td.result{border-color:#c586c0;background:rgba(197,134,192,.18);color:#f4d7f0}
+.small{display:block;font-size:8px;color:#858585;font-weight:400;margin-top:1px}
+.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.meta-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:62px}
+.meta-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.meta-value{font-size:16px;font-weight:700;color:#dcdcaa;line-height:1.35;word-break:break-word}
+.meta-sub{font-size:11px;color:#9cdcfe;line-height:1.35}
+.method-list{display:flex;flex-direction:column;gap:7px}
+.method-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px}
+.method-card.active{border-color:#f7b267;background:rgba(247,178,103,.08)}
+.method-head{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.method-body{font-size:12px;line-height:1.55;color:#d4d4d4}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin:12px 0}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;overflow-x:auto}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.id{color:#9cdcfe}.num{color:#b5cea8}.str{color:#ce9178}.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px 0 16px}
+.progress{width:min(100%,640px);height:8px;border-radius:999px;border:1px solid #3e3e42;background:#2d2d2d;overflow:hidden}
+.progress-bar{height:100%;width:0;background:#569cd6}
+.button-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;min-width:70px;min-height:34px;padding:7px 14px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#343434}
+.nbtn:disabled{opacity:.35;cursor:default}
+#viewer-hotkeys{display:none!important}
+@media (max-width:1180px){#main-content{flex-direction:column}#left-panel,#right-panel{flex:1 1 auto}}
+@media (max-width:720px){body{padding:12px}.meta-grid{grid-template-columns:1fr}.char-cell{width:31px;min-height:36px}.dp-table{min-width:calc(var(--cols) * 31px)}.dp-table td{height:25px}.nbtn{flex:1 1 88px}h1{font-size:18px;line-height:1.35}}
+</style>
+</head>
+<body>
+<h1>LCS Examples / 최장 공통 부분 수열</h1>
+<p class="sub">제공하신 C++ 코드의 입력 예시를 페이지별로 시각화합니다. 긴 CLRS 예시는 제외하고, 각 페이지에서 <code>BottomUpLCS()</code>의 <code>for i</code>, <code>for j</code>, 비교, 갱신, 반복 이동 단계를 모두 보여줍니다.</p>
+
+<div id="tabs"></div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend"></div>
+
+<div id="main-content">
+  <div id="left-panel">
+    <div class="sbox">
+      <div class="slabel">Input strings / 입력 문자열</div>
+      <div id="strings"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">table[][] / 길이 테이블</div>
+      <div id="table-view"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">lcs[][] / 문자열 테이블</div>
+      <div id="lcs-view"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">prev[][] / 경로 복원 방향</div>
+      <div id="prev-view"></div>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div class="sbox">
+      <div class="slabel">Runtime State / 실행 상태</div>
+      <div class="meta-grid">
+        <div class="meta-card"><div class="meta-name" id="meta-a-name"></div><div class="meta-value" id="meta-a-val"></div><div class="meta-sub" id="meta-a-sub"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-b-name"></div><div class="meta-value" id="meta-b-val"></div><div class="meta-sub" id="meta-b-sub"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-c-name"></div><div class="meta-value" id="meta-c-val"></div><div class="meta-sub" id="meta-c-sub"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-d-name"></div><div class="meta-value" id="meta-d-val"></div><div class="meta-sub" id="meta-d-sub"></div></div>
+      </div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">Method results / 함수별 결과</div>
+      <div id="method-view"></div>
+    </div>
+  </div>
+</div>
+
+<div id="code-panel">
+  <div id="code-title">int BottomUpLCS(const string& X, const string& Y, int m, int n)</div>
+  <div id="code-body"></div>
+</div>
+
+<div id="nav">
+  <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="button-row">
+    <button class="nbtn" id="reset" type="button">Home</button>
+    <button class="nbtn" id="prev" type="button">Prev</button>
+    <button class="nbtn" id="auto-btn" type="button">Play</button>
+    <button class="nbtn" id="next" type="button">Next</button>
+    <button class="nbtn" id="last" type="button">End</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const examples = [
+    {
+      key: 'fig14-8',
+      label: 'Page 1. CLRS Fig 14.8',
+      note: 'CLRS 4th p.398 Fig 14.8 그림의 예제',
+      x: 'ABCBDAB',
+      y: 'BDCABA',
+      recurNote: '문자열 길이가 작아서 재귀 흐름을 추적하기 적합한 예시입니다.'
+    },
+    {
+      key: 'intro-short',
+      label: 'Page 2. CLRS Ch14.4 짧은 예시',
+      note: '도입부 예시를 줄인 재귀 확인용 입력',
+      x: 'ACCGGTCGAGT',
+      y: 'GTCGTTCGGAA',
+      recurNote: '짧은 입력이지만 순수 재귀는 중복 호출이 계속 발생합니다.'
+    }
+  ];
+
+  const CODE = [
+    { indent: 0, text: 'vector<vector<int>> table(m + 1, vector<int>(n + 1, 0));' },
+    { indent: 0, text: 'vector<vector<char>> prev(m + 1, vector<char>(n + 1, \' \'));' },
+    { indent: 0, text: 'vector<vector<string>> lcs(m + 1, vector<string>(n + 1, ""));' },
+    { indent: 0, text: 'for (int i = 1; i <= m; i++) {' },
+    { indent: 1, text: 'for (int j = 1; j <= n; j++) {' },
+    { indent: 2, text: 'if (X[i - 1] == Y[j - 1]) {' },
+    { indent: 3, text: 'table[i][j] = table[i - 1][j - 1] + 1;' },
+    { indent: 3, text: 'prev[i][j] = \'\\\\\';' },
+    { indent: 3, text: 'lcs[i][j] = lcs[i - 1][j - 1] + X[i - 1];' },
+    { indent: 2, text: '} else if (table[i - 1][j] >= table[i][j - 1]) {' },
+    { indent: 3, text: 'table[i][j] = table[i - 1][j];' },
+    { indent: 3, text: 'prev[i][j] = \'|\';' },
+    { indent: 3, text: 'lcs[i][j] = lcs[i - 1][j];' },
+    { indent: 2, text: '} else {' },
+    { indent: 3, text: 'table[i][j] = table[i][j - 1];' },
+    { indent: 3, text: 'prev[i][j] = \'-\';' },
+    { indent: 3, text: 'lcs[i][j] = lcs[i][j - 1];' },
+    { indent: 2, text: '}' },
+    { indent: 1, text: '}' },
+    { indent: 0, text: '}' }
+  ];
+
+  const refs = {
+    tabs: document.getElementById('tabs'),
+    counter: document.getElementById('step-counter'),
+    desc: document.getElementById('step-desc'),
+    legend: document.getElementById('legend'),
+    strings: document.getElementById('strings'),
+    table: document.getElementById('table-view'),
+    prevTable: document.getElementById('prev-view'),
+    lcsTable: document.getElementById('lcs-view'),
+    methods: document.getElementById('method-view'),
+    codeBody: document.getElementById('code-body'),
+    progress: document.getElementById('progress-bar'),
+    reset: document.getElementById('reset'),
+    prev: document.getElementById('prev'),
+    next: document.getElementById('next'),
+    last: document.getElementById('last'),
+    auto: document.getElementById('auto-btn'),
+    metaAName: document.getElementById('meta-a-name'),
+    metaAVal: document.getElementById('meta-a-val'),
+    metaASub: document.getElementById('meta-a-sub'),
+    metaBName: document.getElementById('meta-b-name'),
+    metaBVal: document.getElementById('meta-b-val'),
+    metaBSub: document.getElementById('meta-b-sub'),
+    metaCName: document.getElementById('meta-c-name'),
+    metaCVal: document.getElementById('meta-c-val'),
+    metaCSub: document.getElementById('meta-c-sub'),
+    metaDName: document.getElementById('meta-d-name'),
+    metaDVal: document.getElementById('meta-d-val'),
+    metaDSub: document.getElementById('meta-d-sub')
+  };
+
+  let exampleIndex = 0;
+  let current = 0;
+  let timer = null;
+  const prepared = examples.map(prepareExample);
+
+  function esc(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  function blank(rows, cols, value) {
+    return Array.from({ length: rows }, () => Array(cols).fill(value));
+  }
+
+  function prepareExample(example) {
+    const m = example.x.length;
+    const n = example.y.length;
+    const table = blank(m + 1, n + 1, 0);
+    const prev = blank(m + 1, n + 1, ' ');
+    const lcs = blank(m + 1, n + 1, '');
+    const steps = [{
+      i: 0, j: 0, source: 'init', value: 0, lcs: '',
+      desc: '0번째 행과 0번째 열은 빈 문자열을 의미하므로 모두 0으로 시작합니다.',
+      formula: '<code>table[0][*] = table[*][0] = 0</code>',
+      lines: [1, 2, 3]
+    }];
+
+    for (let i = 1; i <= m; i += 1) {
+      steps.push({
+        i, j: 0, source: 'for-i', value: 0, lcs: '',
+        desc: `바깥 for 루프가 i = ${i} 행으로 진입합니다. table[${i}][0]은 빈 Y 접두사이므로 0입니다.`,
+        formula: `<code>for (int i = ${i}; i <= m; i++)</code>`,
+        lines: [4]
+      });
+      for (let j = 1; j <= n; j += 1) {
+        const a = example.x[i - 1];
+        const b = example.y[j - 1];
+        steps.push({
+          i, j, source: 'for-j', value: table[i][j], lcs: lcs[i][j],
+          desc: `안쪽 for 루프가 j = ${j} 열로 진입합니다. 이제 table[${i}][${j}]를 계산합니다.`,
+          formula: `<code>for (int j = ${j}; j <= n; j++)</code>`,
+          lines: [5]
+        });
+        steps.push({
+          i, j, source: 'compare', value: table[i][j], lcs: lcs[i][j], match: a === b,
+          desc: `X[${i - 1}]='${a}'와 Y[${j - 1}]='${b}'를 비교합니다.`,
+          formula: `<code>X[${i - 1}] == Y[${j - 1}]</code>`,
+          lines: [6]
+        });
+        if (a === b) {
+          table[i][j] = table[i - 1][j - 1] + 1;
+          prev[i][j] = '\\';
+          lcs[i][j] = lcs[i - 1][j - 1] + a;
+          steps.push({
+            i, j, source: 'diag', value: table[i][j], prev: prev[i][j], lcs: lcs[i][j], committed: true,
+            desc: `X[${i - 1}]='${a}'와 Y[${j - 1}]='${b}'가 같습니다. 대각선 값에 1을 더합니다.`,
+            formula: `<code>table[${i}][${j}] = table[${i - 1}][${j - 1}] + 1</code>`,
+            lines: [6, 7, 8, 9]
+          });
+        } else if (table[i - 1][j] >= table[i][j - 1]) {
+          table[i][j] = table[i - 1][j];
+          prev[i][j] = '|';
+          lcs[i][j] = lcs[i - 1][j];
+          steps.push({
+            i, j, source: 'up', value: table[i][j], prev: prev[i][j], lcs: lcs[i][j], committed: true,
+            desc: `문자가 다르고 위쪽 값 ${table[i - 1][j]}이 왼쪽 값 ${table[i][j - 1]}보다 크거나 같습니다.`,
+            formula: `<code>table[${i}][${j}] = table[${i - 1}][${j}]</code>`,
+            lines: [10, 11, 12, 13]
+          });
+        } else {
+          table[i][j] = table[i][j - 1];
+          prev[i][j] = '-';
+          lcs[i][j] = lcs[i][j - 1];
+          steps.push({
+            i, j, source: 'left', value: table[i][j], prev: prev[i][j], lcs: lcs[i][j], committed: true,
+            desc: `문자가 다르고 왼쪽 값 ${table[i][j - 1]}이 더 큽니다. 왼쪽 값을 가져옵니다.`,
+            formula: `<code>table[${i}][${j}] = table[${i}][${j - 1}]</code>`,
+            lines: [14, 15, 16, 17]
+          });
+        }
+        steps.push({
+          i, j, source: 'for-j-end', value: table[i][j], prev: prev[i][j], lcs: lcs[i][j],
+          desc: `j = ${j} 반복이 끝났습니다. 안쪽 for 루프가 다음 열로 이동할 준비를 합니다.`,
+          formula: `<code>j++</code>`,
+          lines: [19]
+        });
+      }
+      steps.push({
+        i, j: n, source: 'for-i-end', value: table[i][n], prev: prev[i][n], lcs: lcs[i][n],
+        desc: `i = ${i} 행의 모든 j 반복이 끝났습니다. 바깥 for 루프가 다음 행으로 이동합니다.`,
+        formula: `<code>i++</code>`,
+        lines: [20]
+      });
+    }
+
+    steps.push({
+      i: m, j: n, source: 'done', value: table[m][n], prev: prev[m][n], lcs: lcs[m][n],
+      desc: `계산이 끝났습니다. LCS 길이는 ${table[m][n]}, 예시 LCS는 ${lcs[m][n]}입니다.`,
+      formula: `<code>return table[${m}][${n}]</code>`,
+      lines: []
+    });
+    return { example, steps, finalLength: table[m][n], finalLcs: lcs[m][n] };
+  }
+
+  function stateAt(preparedExample, stepIndex) {
+    const { example, steps } = preparedExample;
+    const table = blank(example.x.length + 1, example.y.length + 1, 0);
+    const prev = blank(example.x.length + 1, example.y.length + 1, ' ');
+    const lcs = blank(example.x.length + 1, example.y.length + 1, '');
+    for (let k = 1; k <= stepIndex && k < steps.length - 1; k += 1) {
+      const step = steps[k];
+      if (!step.committed) continue;
+      table[step.i][step.j] = step.value;
+      prev[step.i][step.j] = step.prev;
+      lcs[step.i][step.j] = step.lcs;
+    }
+    return { table, prev, lcs };
+  }
+
+  function charsFor(text, activeIndex, prefixLength, matched) {
+    return `<div class="chars">${Array.from(text).map((ch, index) => {
+      const classes = ['char-cell'];
+      if (index < prefixLength) classes.push('used');
+      if (index === activeIndex) classes.push(matched ? 'match' : 'active');
+      return `<div class="${classes.join(' ')}"><div class="char-v">${esc(ch)}</div><div class="char-i">${index}</div></div>`;
+    }).join('')}</div>`;
+  }
+
+  function renderStrings(example, step) {
+    const matched = step.i > 0 && step.j > 0 && example.x[step.i - 1] === example.y[step.j - 1];
+    refs.strings.innerHTML = [
+      `<div class="string-row"><div class="str-name">X</div>${charsFor(example.x, step.i ? step.i - 1 : -1, step.i || 0, matched)}</div>`,
+      `<div class="string-row"><div class="str-name">Y</div>${charsFor(example.y, step.j ? step.j - 1 : -1, step.j || 0, matched)}</div>`
+    ].join('');
+  }
+
+  function prevText(value) {
+    if (value === '\\') return '↖';
+    if (value === '|') return '↑';
+    if (value === '-') return '←';
+    return '';
+  }
+
+  function cellClass(step, i, j, matrix, kind) {
+    const classes = [];
+    if (kind === 'table' && matrix[i][j] === 0) classes.push('zero');
+    if (kind === 'lcs' && matrix[i][j] === '') classes.push('empty-cell');
+    if (step.i === i && step.j === j) classes.push('current');
+    if ((step.source === 'diag' || (step.source === 'compare' && step.i > 0 && step.j > 0 && step.match)) && i === step.i - 1 && j === step.j - 1) classes.push('diag');
+    if ((step.source === 'up' || step.source === 'compare') && i === step.i - 1 && j === step.j) classes.push('up');
+    if ((step.source === 'left' || step.source === 'compare') && i === step.i && j === step.j - 1) classes.push('left');
+    if (step.source === 'done' && i === step.i && j === step.j) classes.push('result');
+    return classes.join(' ');
+  }
+
+  function renderMatrix(example, step, matrix, kind) {
+    const colCount = example.y.length + 2;
+    let html = `<div class="table-wrap"><table class="dp-table ${kind}-table" style="--cols:${colCount}"><thead><tr><th></th><th>0</th>`;
+    for (let j = 1; j <= example.y.length; j += 1) {
+      html += `<th>${j}<span class="small">${esc(example.y[j - 1])}</span></th>`;
+    }
+    html += '</tr></thead><tbody>';
+    for (let i = 0; i <= example.x.length; i += 1) {
+      html += `<tr><th>${i}${i > 0 ? `<span class="small">${esc(example.x[i - 1])}</span>` : ''}</th>`;
+      for (let j = 0; j <= example.y.length; j += 1) {
+        let value = kind === 'prev' ? prevText(matrix[i][j]) : matrix[i][j];
+        if (kind === 'lcs' && value === '') value = '""';
+        const title = kind === 'lcs' ? ` title="${esc(value)}"` : '';
+        html += `<td class="${cellClass(step, i, j, matrix, kind)}"${title}>${esc(value)}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  function syntax(line) {
+    return esc(line)
+      .replace(/(&quot;.*?&quot;|&#39;.*?&#39;)/g, '<span class="str">$1</span>')
+      .replace(/\b(vector|string|int|char|for|if|else|return)\b/g, '<span class="kw">$1</span>')
+      .replace(/\b(BottomUpLCS|min|max|setw|PrintLCS)\b/g, '<span class="fn">$1</span>')
+      .replace(/\b(table|prev|lcs|X|Y|m|n|i|j)\b/g, '<span class="id">$1</span>')
+      .replace(/\b\d+\b/g, '<span class="num">$&</span>');
+  }
+
+  function renderCode(step) {
+    const active = new Set(step.lines || []);
+    refs.codeBody.innerHTML = CODE.map((line, index) => {
+      const no = index + 1;
+      return `<div class="cline ${active.has(no) ? 'hl' : ''}">
+        <div class="lnum">${no}</div>
+        <div class="lcode" style="--indent:${line.indent}">${syntax(line.text)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderMethods(preparedExample, step) {
+    const { example, finalLength, finalLcs } = preparedExample;
+    const recurState = example.x.length * example.y.length <= 50 ? '작은 입력이라 재귀 추적 가능' : '순수 재귀는 중복 호출이 많아 시각화는 Bottom-Up 중심';
+    refs.methods.innerHTML = `<div class="method-list">
+      <div class="method-card"><div class="method-head">RecurLCS()</div><div class="method-body">${esc(example.recurNote)}<br>결과 예시: ${esc(finalLcs)}</div></div>
+      <div class="method-card"><div class="method-head">RecurLengthLCS()</div><div class="method-body">${esc(recurState)}<br>최종 길이: ${finalLength}</div></div>
+      <div class="method-card active"><div class="method-head">BottomUpLCS()</div><div class="method-body">현재 단계: ${esc(step.source)}<br>현재 셀 table[${step.i}][${step.j}], 현재 후보 LCS: ${esc(step.lcs || '')}</div></div>
+    </div>`;
+  }
+
+  function renderMeta(preparedExample, step) {
+    const { example, finalLength, finalLcs } = preparedExample;
+    refs.metaAName.textContent = 'Example';
+    refs.metaAVal.textContent = examples[exampleIndex].label.replace(/^Page \d+\. /, '');
+    refs.metaASub.textContent = example.note;
+    refs.metaBName.textContent = 'i, j';
+    refs.metaBVal.textContent = `${step.i}, ${step.j}`;
+    refs.metaBSub.textContent = 'table index';
+    refs.metaCName.textContent = 'Compare';
+    if (step.i > 0 && step.j > 0) {
+      const a = example.x[step.i - 1];
+      const b = example.y[step.j - 1];
+      refs.metaCVal.textContent = `${a} ${a === b ? '=' : '≠'} ${b}`;
+      refs.metaCSub.textContent = `X[${step.i - 1}], Y[${step.j - 1}]`;
+    } else {
+      refs.metaCVal.textContent = '-';
+      refs.metaCSub.textContent = 'base row/column';
+    }
+    refs.metaDName.textContent = 'Result';
+    refs.metaDVal.textContent = step.source === 'done' ? finalLcs : (step.value === undefined ? '-' : String(step.value));
+    refs.metaDSub.textContent = step.source === 'done' ? `length ${finalLength}` : `source ${step.source}`;
+  }
+
+  function renderLegend() {
+    const items = [
+      { label: '현재 셀', fill: 'rgba(247,178,103,.16)', stroke: '#f7b267' },
+      { label: '문자 일치 / 대각선', fill: 'rgba(78,201,176,.16)', stroke: '#4ec9b0' },
+      { label: '위쪽 또는 왼쪽 후보', fill: 'rgba(220,220,170,.14)', stroke: '#dcdcaa' },
+      { label: '최종 결과', fill: 'rgba(197,134,192,.18)', stroke: '#c586c0' }
+    ];
+    refs.legend.innerHTML = items.map((item) => `<div class="leg"><div class="leg-c" style="background:${item.fill};border-color:${item.stroke}"></div>${item.label}</div>`).join('');
+  }
+
+  function renderTabs() {
+    refs.tabs.innerHTML = prepared.map((item, index) => (
+      `<button class="tab-btn ${index === exampleIndex ? 'active' : ''}" data-index="${index}" type="button">${item.example.label}</button>`
+    )).join('');
+    refs.tabs.querySelectorAll('button').forEach((button) => {
+      button.addEventListener('click', () => {
+        stopAuto();
+        exampleIndex = Number(button.dataset.index);
+        current = 0;
+        renderTabs();
+        renderStep();
+      });
+    });
+  }
+
+  function renderStep() {
+    const item = prepared[exampleIndex];
+    const step = item.steps[current];
+    const state = stateAt(item, current);
+    refs.counter.textContent = `Step ${current + 1} / ${item.steps.length}`;
+    refs.desc.innerHTML = `<div class="desc-main">${esc(step.desc)}</div><div class="desc-formula">${step.formula}</div>`;
+    renderStrings(item.example, step);
+    refs.table.innerHTML = renderMatrix(item.example, step, state.table, 'table');
+    refs.prevTable.innerHTML = renderMatrix(item.example, step, state.prev, 'prev');
+    refs.lcsTable.innerHTML = renderMatrix(item.example, step, state.lcs, 'lcs');
+    renderMeta(item, step);
+    renderMethods(item, step);
+    renderCode(step);
+    refs.progress.style.width = `${item.steps.length <= 1 ? 100 : (current / (item.steps.length - 1)) * 100}%`;
+    refs.prev.disabled = current === 0;
+    refs.reset.disabled = current === 0;
+    refs.next.disabled = current === item.steps.length - 1;
+    refs.last.disabled = current === item.steps.length - 1;
+  }
+
+  function setStep(index) {
+    current = Math.max(0, Math.min(prepared[exampleIndex].steps.length - 1, index));
+    renderStep();
+  }
+
+  function stopAuto() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    refs.auto.textContent = 'Play';
+  }
+
+  function toggleAuto() {
+    if (timer) {
+      stopAuto();
+      return;
+    }
+    refs.auto.textContent = 'Pause';
+    timer = setInterval(() => {
+      if (current >= prepared[exampleIndex].steps.length - 1) {
+        stopAuto();
+        return;
+      }
+      setStep(current + 1);
+    }, 500);
+  }
+
+  refs.reset.addEventListener('click', () => setStep(0));
+  refs.prev.addEventListener('click', () => setStep(current - 1));
+  refs.next.addEventListener('click', () => setStep(current + 1));
+  refs.last.addEventListener('click', () => setStep(prepared[exampleIndex].steps.length - 1));
+  refs.auto.addEventListener('click', toggleAuto);
+  document.addEventListener('keydown', (event) => {
+    if (event.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+    if (event.code === 'ArrowRight') setStep(current + 1);
+    if (event.code === 'ArrowLeft') setStep(current - 1);
+    if (event.code === 'Home') setStep(0);
+    if (event.code === 'End') setStep(prepared[exampleIndex].steps.length - 1);
+    if (event.code === 'Space') {
+      event.preventDefault();
+      toggleAuto();
+    }
+  });
+
+  renderLegend();
+  renderTabs();
+  renderStep();
+})();
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,519 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Activity Selection / 활동 선택 문제</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:16px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
+.sub{max-width:1180px;color:#c9c9c9;line-height:1.65;margin-bottom:10px}
+code{font-family:inherit;color:#9cdcfe}
+#step-counter{font-size:11px;color:#858585;margin-top:8px}
+#step-desc{margin-top:5px;padding:10px 12px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0;line-height:1.65;min-height:76px;display:flex;flex-direction:column;gap:5px}
+.desc-main{font-size:13px;color:#e0e0e0}
+.desc-formula{font-size:12px;color:#dcdcaa;word-break:break-word}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:grid;grid-template-columns:minmax(520px,1.25fr) minmax(320px,.75fr);gap:14px;align-items:start;margin:12px 0}
+#left-panel,#right-panel{display:flex;flex-direction:column;gap:10px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.array-name{flex:0 0 100%;font-size:11px;color:#858585;margin-bottom:2px}
+.activity-table-wrap{overflow:auto;max-width:100%;padding-bottom:2px}
+.activity-table-simple{width:100%;min-width:620px;border-collapse:separate;border-spacing:2px;table-layout:fixed}
+.activity-table-simple th{height:24px;text-align:center;color:#858585;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.4px}
+.activity-table-simple td{height:34px;text-align:center;border:1px solid #343434;border-radius:4px;background:#1f1f1f;color:#d4d4d4;font-size:12px;font-weight:700;padding:0 6px;white-space:nowrap}
+.activity-table-simple td.compare{border-color:#f7b267;background:rgba(247,178,103,.18);color:#ffd8aa}
+.activity-table-simple .status-badge{display:inline-block;border:1px solid #343434;border-radius:999px;padding:2px 7px;background:#252526;color:#858585;font-size:10px}
+.schedule-array{display:flex;flex-wrap:wrap;gap:8px;min-height:42px;align-items:center}
+.schedule-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;color:#d4d4d4;font-size:12px;font-weight:700;line-height:1.35}
+.empty{color:#666;font-size:12px}
+.compare-box{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:10px 12px;line-height:1.7}
+.compare-title{font-size:11px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.compare-code{font-size:16px;font-weight:700;color:#d4d4d4;word-break:break-word}
+.var-token{display:inline-block;border:1px solid #343434;border-radius:5px;padding:2px 8px;background:#252526;color:#d4d4d4}
+.var-token.compare{border-color:#f7b267;background:rgba(247,178,103,.18);color:#ffd8aa}
+.op-token{color:#9cdcfe;margin:0 5px}
+.decision-text{margin-top:8px;font-size:12px;color:#dcdcaa}
+.state-strip{display:flex;flex-wrap:wrap;gap:8px}
+.state-chip{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:7px 9px;min-width:112px}
+.state-chip .label{display:block;font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.state-chip .value{font-size:14px;font-weight:700;color:#dcdcaa}
+.trace-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;padding-right:2px}
+.trace-line{display:grid;grid-template-columns:48px 1fr 90px;gap:8px;align-items:center;background:#1f1f1f;border:1px solid #343434;border-radius:5px;padding:7px 8px;font-size:12px;line-height:1.45}
+.trace-no{font-size:10px;color:#858585}
+.trace-main{color:#d4d4d4}
+.trace-state{text-align:right;color:#9cdcfe;font-weight:700}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin:12px 0}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.lnum{width:42px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;overflow-x:auto}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}.id{color:#9cdcfe}
+#nav{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px 0 16px}
+.progress{width:min(100%,640px);height:8px;border-radius:999px;border:1px solid #3e3e42;background:#2d2d2d;overflow:hidden}
+.progress-bar{height:100%;width:0;background:#569cd6}
+.button-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;min-width:70px;min-height:34px;padding:7px 14px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#343434}
+.nbtn:disabled{opacity:.35;cursor:default}
+#viewer-hotkeys{display:none!important}
+@media (max-width:980px){#main-content{grid-template-columns:1fr}.activity-table-simple{min-width:560px}}
+@media (max-width:680px){body{padding:12px}h1{font-size:18px;line-height:1.35}.trace-line{grid-template-columns:42px 1fr}.trace-state{text-align:left}.nbtn{flex:1 1 86px}}
+</style>
+</head>
+<body>
+<h1>Activity Selection / 활동 선택 문제</h1>
+<p class="sub">제공하신 C++ 코드의 활동 선택 탐욕 알고리즘을 시각화합니다. 종료 시간이 빠른 순서로 정렬한 <code>activities</code> 배열을 순회하면서 <code>act.start >= current_time</code>인 활동만 <code>schedule</code> 배열에 추가합니다.</p>
+
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend"></div>
+
+<div id="main-content">
+  <div id="left-panel">
+    <div class="sbox">
+      <div class="slabel">Activities / 활동 배열</div>
+      <div id="activities-view"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">Schedule / 선택된 활동 배열</div>
+      <div id="schedule-view"></div>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div class="sbox">
+      <div class="slabel">Comparison / 비교 변수</div>
+      <div id="compare-view"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">State / 실행 상태</div>
+      <div id="state-view"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">Trace / 반복문 흐름</div>
+      <div class="trace-list" id="trace-view"></div>
+    </div>
+  </div>
+</div>
+
+<div id="code-panel">
+  <div id="code-title">vector&lt;Activity&gt; GreedyActivitySelection(vector&lt;Activity&gt;&amp; activities)</div>
+  <div id="code-body"></div>
+</div>
+
+<div id="nav">
+  <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="button-row">
+    <button class="nbtn" id="reset" type="button">Home</button>
+    <button class="nbtn" id="prev" type="button">Prev</button>
+    <button class="nbtn" id="auto-btn" type="button">Play</button>
+    <button class="nbtn" id="next" type="button">Next</button>
+    <button class="nbtn" id="last" type="button">End</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const activities = [
+    { id: 1, start: 5, end: 7 },
+    { id: 2, start: 2, end: 5 },
+    { id: 3, start: 6, end: 13 },
+    { id: 4, start: 1, end: 8 },
+    { id: 5, start: 6, end: 9 },
+    { id: 6, start: 3, end: 8 },
+    { id: 7, start: 9, end: 11 },
+    { id: 8, start: 5, end: 12 },
+    { id: 9, start: 8, end: 10 },
+    { id: 10, start: 1, end: 4 },
+    { id: 11, start: 3, end: 6 },
+    { id: 12, start: 8, end: 14 },
+    { id: 13, start: 13, end: 15 }
+  ];
+
+  const codeLines = [
+    { i: 0, h: '<span class="kw">struct</span> <span class="tp">Activity</span> { <span class="kw">int</span> start; <span class="kw">int</span> end; };' },
+    { i: 0, h: '<span class="kw">bool</span> <span class="fn">Compare</span>(<span class="tp">Activity</span> a, <span class="tp">Activity</span> b)' },
+    { i: 0, h: '{' },
+    { i: 1, h: '<span class="kw">return</span> a.end &lt; b.end;' },
+    { i: 0, h: '}' },
+    { i: 0, h: '' },
+    { i: 0, h: '<span class="kw">vector</span>&lt;<span class="tp">Activity</span>&gt; <span class="fn">GreedyActivitySelection</span>(<span class="kw">vector</span>&lt;<span class="tp">Activity</span>&gt;&amp; activities)' },
+    { i: 0, h: '{' },
+    { i: 1, h: '<span class="fn">sort</span>(activities.begin(), activities.end(), Compare);' },
+    { i: 1, h: '<span class="fn">Print</span>(activities);' },
+    { i: 1, h: '<span class="kw">vector</span>&lt;<span class="tp">Activity</span>&gt; schedule;' },
+    { i: 1, h: '<span class="kw">int</span> current_time = activities[<span class="num">0</span>].start;' },
+    { i: 1, h: '<span class="kw">for</span> (<span class="tp">Activity</span> act : activities)' },
+    { i: 1, h: '{' },
+    { i: 2, h: '<span class="kw">if</span> (act.start &gt;= current_time)' },
+    { i: 2, h: '{' },
+    { i: 3, h: 'schedule.<span class="fn">push_back</span>(act);' },
+    { i: 3, h: 'current_time = act.end + <span class="num">1</span>;' },
+    { i: 3, h: '<span class="cm">// 종료 시간을 포함하므로 다음 시작 기준은 end + 1</span>' },
+    { i: 2, h: '}' },
+    { i: 1, h: '}' },
+    { i: 1, h: '<span class="kw">return</span> schedule;' },
+    { i: 0, h: '}' }
+  ];
+
+  const refs = {
+    counter: document.getElementById('step-counter'),
+    desc: document.getElementById('step-desc'),
+    legend: document.getElementById('legend'),
+    activities: document.getElementById('activities-view'),
+    schedule: document.getElementById('schedule-view'),
+    compare: document.getElementById('compare-view'),
+    state: document.getElementById('state-view'),
+    trace: document.getElementById('trace-view'),
+    code: document.getElementById('code-body'),
+    progress: document.getElementById('progress-bar'),
+    reset: document.getElementById('reset'),
+    prev: document.getElementById('prev'),
+    next: document.getElementById('next'),
+    last: document.getElementById('last'),
+    auto: document.getElementById('auto-btn')
+  };
+
+  const sortedActivities = activities
+    .map((act, index) => ({ ...act, inputOrder: index + 1 }))
+    .sort((a, b) => a.end - b.end || a.inputOrder - b.inputOrder);
+  const steps = buildSteps();
+  let current = 0;
+  let timer = null;
+
+  function buildSteps() {
+    const built = [];
+    const schedule = [];
+    const trace = [];
+    const statuses = new Map();
+    let currentTime = null;
+
+    built.push({
+      kind: 'input',
+      desc: '입력된 activities 배열입니다. 아직 종료 시간 기준 정렬은 적용되지 않았습니다.',
+      formula: 'Print(activities) : 입력 순서 그대로 표시',
+      list: activities.map((act, index) => ({ ...act, inputOrder: index + 1 })),
+      currentId: null,
+      currentTime,
+      schedule: [],
+      trace: [],
+      statuses: new Map(statuses),
+      hl: [1]
+    });
+
+    built.push({
+      kind: 'sort',
+      desc: 'Compare()는 end가 작은 활동이 앞에 오도록 정렬합니다. activities 배열이 종료 시간 오름차순으로 바뀝니다.',
+      formula: 'sort(activities.begin(), activities.end(), Compare)',
+      list: sortedActivities,
+      currentId: null,
+      currentTime,
+      schedule: [],
+      trace: [],
+      statuses: new Map(statuses),
+      hl: [2, 3, 4, 5, 9]
+    });
+
+    currentTime = sortedActivities[0].start;
+    built.push({
+      kind: 'init',
+      desc: `정렬 후 첫 활동의 시작 시간으로 current_time을 초기화합니다. 첫 활동은 A${sortedActivities[0].id}이므로 current_time = ${currentTime}입니다.`,
+      formula: `current_time = activities[0].start = ${currentTime}`,
+      list: sortedActivities,
+      currentId: null,
+      currentTime,
+      schedule: [],
+      trace: [],
+      statuses: new Map(statuses),
+      hl: [10, 11, 12]
+    });
+
+    sortedActivities.forEach((act, index) => {
+      const before = currentTime;
+      const previousSelected = schedule.length ? schedule[schedule.length - 1] : null;
+      const accepted = act.start >= currentTime;
+      if (accepted) {
+        schedule.push(act);
+        statuses.set(act.id, 'selected');
+        currentTime = act.end + 1;
+      } else {
+        statuses.set(act.id, 'rejected');
+      }
+      trace.push({ index: index + 1, act, before, accepted, after: currentTime });
+
+      built.push({
+        kind: accepted ? 'selected' : 'rejected',
+        desc: accepted
+          ? `A${act.id}의 start=${act.start}와 ${previousSelected ? `이전 선택 A${previousSelected.id}의 end=${previousSelected.end}` : `초기 current_time=${before}`}를 비교합니다. 조건을 만족하므로 schedule 배열에 추가합니다.`
+          : `A${act.id}의 start=${act.start}와 이전 선택 A${previousSelected.id}의 end=${previousSelected.end}를 비교합니다. start가 다음 시작 기준보다 작아서 선택하지 않습니다.`,
+        formula: accepted
+          ? previousSelected
+            ? `act.start(${act.start}) >= previous.end(${previousSelected.end}) + 1 → 선택, current_time = ${act.end} + 1 = ${currentTime}`
+            : `act.start(${act.start}) >= current_time(${before}) → 선택, current_time = ${act.end} + 1 = ${currentTime}`
+          : `act.start(${act.start}) < previous.end(${previousSelected.end}) + 1 → 건너뜀`,
+        list: sortedActivities,
+        currentId: act.id,
+        prevSelectedId: previousSelected ? previousSelected.id : null,
+        currentTime,
+        schedule: schedule.slice(),
+        trace: trace.slice(),
+        statuses: new Map(statuses),
+        compareTime: before,
+        hl: accepted ? [13, 14, 15, 16, 17, 18, 19, 20] : [13, 14, 15]
+      });
+    });
+
+    built.push({
+      kind: 'final',
+      desc: `반복문이 끝났습니다. schedule 배열에는 선택된 활동 ${schedule.length}개만 남습니다.`,
+      formula: `return schedule; selected = ${schedule.map((act) => `(${act.start}, ${act.end})`).join(' → ')}`,
+      list: sortedActivities,
+      currentId: null,
+      currentTime,
+      schedule: schedule.slice(),
+      trace: trace.slice(),
+      statuses: new Map(statuses),
+      hl: [21, 22]
+    });
+
+    return built;
+  }
+
+  function renderLegend() {
+    refs.legend.innerHTML = [
+      ['#f7b267', '현재 start / 이전 선택 end'],
+      ['#9cdcfe', '상태 값']
+    ].map(([color, label]) => `<div class="leg"><div class="leg-c" style="background:${color}22;border-color:${color}"></div>${label}</div>`).join('');
+  }
+
+  function statusFor(step, act) {
+    return step.statuses.get(act.id) || 'waiting';
+  }
+
+  function renderStepDesc(step) {
+    refs.counter.textContent = `Step ${current + 1} / ${steps.length}`;
+    refs.desc.innerHTML = `<div class="desc-main">${step.desc}</div><div class="desc-formula"><code>${step.formula}</code></div>`;
+  }
+
+  function renderActivities(step) {
+    refs.activities.innerHTML = `
+      <div class="activity-table-wrap">
+        <table class="activity-table-simple">
+          <thead>
+            <tr>
+              <th>index</th>
+              <th>activity</th>
+              <th>start</th>
+              <th>end</th>
+              <th>state</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${step.list.map((act, index) => {
+              const status = statusFor(step, act);
+              const isCurrent = step.currentId === act.id;
+              const isPreviousSelected = step.prevSelectedId === act.id;
+              const statusText = status === 'selected' ? '선택됨' : status === 'rejected' ? '건너뜀' : '대기';
+              return `<tr>
+                <td>${index}</td>
+                <td>A${act.id}</td>
+                <td class="${isCurrent ? 'compare' : ''}">${act.start}</td>
+                <td class="${isPreviousSelected ? 'compare' : ''}">${act.end}</td>
+                <td><span class="status-badge">${isCurrent ? '현재 비교' : statusText}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function renderSchedule(step) {
+    if (!step.schedule.length) {
+      refs.schedule.innerHTML = '<div class="schedule-array"><span class="empty">schedule = []</span></div>';
+      return;
+    }
+    refs.schedule.innerHTML = `
+      <div class="schedule-array">
+        <span class="array-name">schedule = [</span>
+        ${step.schedule.map((act) => {
+          return `<span class="schedule-card">A${act.id}<br>(${act.start}, ${act.end})</span>`;
+        }).join('')}
+        <span class="array-name">]</span>
+      </div>`;
+  }
+
+  function renderCompare(step) {
+    const act = step.currentId ? step.list.find((item) => item.id === step.currentId) : null;
+    const previous = step.prevSelectedId ? step.list.find((item) => item.id === step.prevSelectedId) : null;
+    if (!act) {
+      refs.compare.innerHTML = `
+        <div class="compare-box">
+          <div class="compare-title">비교 전</div>
+          <div class="compare-code">act.start <span class="op-token">&gt;=</span> previous.end + 1</div>
+          <div class="decision-text">이전 선택 활동의 end에서 다음 시작 기준을 만들고 현재 start와 비교합니다.</div>
+        </div>`;
+      return;
+    }
+    const accepted = step.kind === 'selected';
+    if (!previous) {
+      refs.compare.innerHTML = `
+        <div class="compare-box">
+          <div class="compare-title">첫 번째 선택</div>
+          <div class="compare-code">
+            <span class="var-token compare">act.start = ${act.start}</span>
+            <span class="op-token">&gt;=</span>
+            <span class="var-token">current_time = ${step.compareTime}</span>
+          </div>
+          <div class="decision-text">이전 선택 활동이 없어서 정렬 후 첫 활동의 start로 초기화한 current_time과 비교합니다.</div>
+        </div>`;
+      return;
+    }
+    refs.compare.innerHTML = `
+      <div class="compare-box">
+        <div class="compare-title">if (act.start &gt;= current_time)</div>
+        <div class="compare-code">
+          <span class="var-token compare">act.start = ${act.start}</span>
+          <span class="op-token">${accepted ? '&gt;=' : '&lt;'}</span>
+          <span class="var-token compare">previous.end = ${previous.end}</span>
+          <span class="op-token">+ 1 =</span>
+          <span class="var-token">current_time = ${step.compareTime}</span>
+        </div>
+        <div class="decision-text">${accepted ? `조건 만족 → schedule에 추가, 다음 current_time = end + 1 = ${act.end + 1}` : '조건 불만족 → 건너뜀'}</div>
+      </div>`;
+  }
+
+  function renderState(step) {
+    const currentLabel = step.currentId ? `A${step.currentId}` : '-';
+    const decision = step.kind === 'selected' ? '선택' : step.kind === 'rejected' ? '건너뜀' : '-';
+    refs.state.innerHTML = `
+      <div class="state-strip">
+        <div class="state-chip"><span class="label">current activity</span><span class="value">${currentLabel}</span></div>
+        <div class="state-chip"><span class="label">current_time</span><span class="value">${step.currentTime == null ? '-' : step.currentTime}</span></div>
+        <div class="state-chip"><span class="label">decision</span><span class="value">${decision}</span></div>
+        <div class="state-chip"><span class="label">schedule.size()</span><span class="value">${step.schedule.length}</span></div>
+      </div>`;
+  }
+
+  function renderTrace(step) {
+    if (!step.trace.length) {
+      refs.trace.innerHTML = '<div class="trace-line"><div class="trace-no">-</div><div class="trace-main">아직 for 반복문에 들어가지 않았습니다.</div></div>';
+      return;
+    }
+    refs.trace.innerHTML = step.trace.map((entry, index) => {
+      const cls = entry.accepted ? 'selected' : 'rejected';
+      const currentClass = index === step.trace.length - 1 && step.kind !== 'final' ? ' current' : '';
+      return `<div class="trace-line ${cls}${currentClass}">
+        <div class="trace-no">#${entry.index}</div>
+        <div class="trace-main">A${entry.act.id}: start ${entry.act.start} vs current_time ${entry.before}</div>
+        <div class="trace-state">${entry.accepted ? `push, next ${entry.after}` : 'skip'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderCode(step) {
+    const active = new Set(step.hl);
+    refs.code.innerHTML = codeLines.map((line, index) => `
+      <div class="cline${active.has(index + 1) ? ' hl' : ''}">
+        <div class="lnum">${index + 1}</div>
+        <div class="lcode" style="--indent:${line.i}">${line.h || '&nbsp;'}</div>
+      </div>`).join('');
+  }
+
+  function render() {
+    const step = steps[current];
+    renderStepDesc(step);
+    renderLegend();
+    renderActivities(step);
+    renderSchedule(step);
+    renderCompare(step);
+    renderState(step);
+    renderTrace(step);
+    renderCode(step);
+    refs.progress.style.width = `${steps.length === 1 ? 100 : current / (steps.length - 1) * 100}%`;
+    refs.prev.disabled = current === 0;
+    refs.reset.disabled = current === 0;
+    refs.next.disabled = current === steps.length - 1;
+    refs.last.disabled = current === steps.length - 1;
+  }
+
+  function move(delta) {
+    current = Math.max(0, Math.min(steps.length - 1, current + delta));
+    render();
+  }
+
+  function setStep(index) {
+    current = Math.max(0, Math.min(steps.length - 1, index));
+    render();
+  }
+
+  function stopAuto() {
+    if (timer) {
+      window.clearInterval(timer);
+      timer = null;
+      refs.auto.textContent = 'Play';
+    }
+  }
+
+  function toggleAuto() {
+    if (timer) {
+      stopAuto();
+      return;
+    }
+    refs.auto.textContent = 'Pause';
+    timer = window.setInterval(() => {
+      if (current >= steps.length - 1) {
+        stopAuto();
+      } else {
+        move(1);
+      }
+    }, 900);
+  }
+
+  refs.prev.addEventListener('click', () => { stopAuto(); move(-1); });
+  refs.next.addEventListener('click', () => { stopAuto(); move(1); });
+  refs.reset.addEventListener('click', () => { stopAuto(); setStep(0); });
+  refs.last.addEventListener('click', () => { stopAuto(); setStep(steps.length - 1); });
+  refs.auto.addEventListener('click', toggleAuto);
+
+  window.addEventListener('keydown', (event) => {
+    const tag = (event.target && event.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target.isContentEditable) return;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      stopAuto();
+      move(-1);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      stopAuto();
+      move(1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      stopAuto();
+      setStep(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      stopAuto();
+      setStep(steps.length - 1);
+    } else if (event.key === ' ') {
+      event.preventDefault();
+      toggleAuto();
+    }
+  });
+
+  render();
+})();
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>
+

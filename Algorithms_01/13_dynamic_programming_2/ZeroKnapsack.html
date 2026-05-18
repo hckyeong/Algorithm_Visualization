@@ -1,0 +1,921 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zero-One Knapsack / 0-1 배낭 문제</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:16px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
+.sub{max-width:1180px;color:#c9c9c9;line-height:1.65;margin-bottom:10px}
+#tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tab-btn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:7px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px}
+.tab-btn.active{background:rgba(86,156,214,.14);border-color:#569cd6;color:#9cdcfe}
+#step-counter{font-size:11px;color:#858585;margin-top:8px}
+#step-desc{margin-top:5px;padding:10px 12px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0;line-height:1.65;min-height:68px;display:flex;flex-direction:column;gap:6px}
+.desc-main{font-size:13px;color:#e0e0e0}
+.desc-formula{font-size:12px;color:#dcdcaa;word-break:break-word}
+.desc-formula code{font-family:inherit;color:#9cdcfe}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);align-items:start;gap:14px;margin:12px 0}
+#left-panel,#right-panel{display:contents}
+#items-box{grid-column:1;grid-row:1}
+#runtime-box{grid-column:2;grid-row:1;height:620px;overflow:auto}
+#primary-box{grid-column:1 / -1;grid-row:2}
+#secondary-box{grid-column:1 / -1;grid-row:3}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.item-table-wrap{overflow:auto;max-width:100%}
+.item-table{border-collapse:separate;border-spacing:2px;min-width:360px;table-layout:fixed}
+.item-table th{height:24px;text-align:center;color:#858585;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.4px}
+.item-table td{height:34px;text-align:center;border:1px solid #343434;border-radius:4px;background:#1f1f1f;color:#d4d4d4;font-size:12px;font-weight:700;padding:0 8px;white-space:nowrap}
+.item-table tr.take td{border-color:#4ec9b0;background:rgba(78,201,176,.12);color:#b7fff1}
+.item-table tr.active td{border-color:#f7b267;background:rgba(247,178,103,.14);color:#ffd8aa}
+.item-table .item-name{color:#dcdcaa}
+.table-wrap{overflow:auto;max-width:100%;padding-bottom:2px}
+.dp-pair{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:10px;align-items:start}
+.dp-panel{min-width:0}
+.dp-panel-title{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.dp-table{border-collapse:separate;border-spacing:2px;width:100%;min-width:calc(var(--cols) * 46px);table-layout:fixed}
+.dp-table th{height:22px;text-align:center;color:#858585;font-size:9px;font-weight:400}
+.dp-table td{height:34px;text-align:center;border:1px solid #343434;border-radius:4px;background:#1f1f1f;color:#d4d4d4;font-size:12px;font-weight:700;transition:all .2s;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dp-table.items-table td{font-size:10px;color:#9cdcfe}
+.dp-table td.zero{color:#666}
+.dp-table td.current{border-color:#f7b267;background:rgba(247,178,103,.16);color:#ffd8aa}
+.dp-table td.source{border-color:#4ec9b0;background:rgba(78,201,176,.16);color:#b7fff1}
+.dp-table td.result{border-color:#c586c0;background:rgba(197,134,192,.18);color:#f4d7f0}
+.cell-main{display:inline-block}
+.add-badge{display:inline-block;margin-left:4px;border:1px solid #4ec9b0;border-radius:999px;padding:1px 5px;background:rgba(78,201,176,.16);color:#b7fff1;font-size:9px;font-weight:700;line-height:1.2;vertical-align:middle}
+.small{display:block;font-size:8px;color:#858585;font-weight:400;margin-top:1px}
+.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.meta-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:62px}
+.meta-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.meta-value{font-size:16px;font-weight:700;color:#dcdcaa;line-height:1.35;word-break:break-word}
+.meta-sub{font-size:11px;color:#9cdcfe;line-height:1.35}
+.runtime-state{display:flex;flex-direction:column;gap:8px}
+.runtime-current{background:#1f1f1f;border:1px solid #f7b267;border-radius:6px;padding:9px 10px}
+.runtime-current .meta-value{font-size:15px}
+.case-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:9px 10px;line-height:1.5}
+.case-card.active{border-color:#f7b267;background:rgba(247,178,103,.1)}
+.case-card.heavy.active{border-color:#dcdcaa;background:rgba(220,220,170,.1)}
+.case-card.can-take.active{border-color:#4ec9b0;background:rgba(78,201,176,.1)}
+.case-title{font-size:11px;font-weight:700;color:#dcdcaa;margin-bottom:3px}
+.case-desc{font-size:11px;color:#d4d4d4}
+.case-formula{font-size:11px;color:#9cdcfe;margin-top:4px;word-break:break-word}
+.case-status{display:inline-block;margin-top:5px;border:1px solid #343434;border-radius:999px;padding:2px 7px;font-size:10px;color:#858585;background:#252526}
+.case-card.active .case-status{border-color:#f7b267;color:#ffd8aa}
+.source-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.source-row{display:grid;grid-template-columns:82px 1fr auto;gap:6px;align-items:center;border:1px solid #343434;border-radius:5px;background:#252526;padding:6px 8px;font-size:11px}
+.source-row.skip{border-color:#dcdcaa;background:rgba(220,220,170,.09)}
+.source-row.take{border-color:#4ec9b0;background:rgba(78,201,176,.09)}
+.source-row.result{border-color:#c586c0;background:rgba(197,134,192,.1)}
+.source-label{color:#858585}
+.source-cell{color:#9cdcfe;font-weight:700}
+.source-value{color:#dcdcaa;font-weight:700}
+.trace-list,.stack-list{display:flex;flex-direction:column;gap:7px;max-height:320px;overflow:auto;padding-right:2px}
+.trace-line,.frame{background:#1f1f1f;border:1px solid #343434;border-radius:5px;padding:7px 8px;font-size:12px;line-height:1.45;color:#d4d4d4}
+.trace-line.current,.frame.current{border-color:#f7b267;background:rgba(247,178,103,.1)}
+.frame{display:grid;grid-template-columns:46px 1fr auto;gap:8px;align-items:center}
+.frame-id{font-size:10px;color:#858585}
+.frame-main{font-size:12px;color:#d4d4d4}
+.frame-sub{font-size:11px;color:#9cdcfe}
+.call-tree-wrap{overflow:auto;max-height:520px;padding:3px 0 8px}
+.call-tree,.call-tree ul{list-style:none;margin:0;padding-left:0}
+.call-tree ul{margin-left:20px;padding-left:16px;border-left:1px solid #3e3e42}
+.call-tree li{position:relative;margin:7px 0}
+.call-tree ul li::before{content:"";position:absolute;left:-16px;top:18px;width:13px;border-top:1px solid #3e3e42}
+.tree-card{display:inline-grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;min-width:250px;max-width:360px;border:1px solid #343434;background:#1f1f1f;border-radius:6px;padding:8px 9px;font-size:12px;line-height:1.4}
+.tree-card.branching{border-color:#569cd6;background:rgba(86,156,214,.1)}
+.tree-card.blocked{border-color:#dcdcaa;background:rgba(220,220,170,.1)}
+.tree-card.returned{border-color:#c586c0;background:rgba(197,134,192,.12)}
+.tree-card.current{border-color:#f7b267;background:rgba(247,178,103,.13)}
+.tree-call{font-weight:700;color:#dcdcaa}
+.tree-meta{color:#d4d4d4}
+.tree-branch{font-size:10px;color:#9cdcfe;border:1px solid #343434;border-radius:999px;padding:2px 7px;background:#252526;white-space:nowrap}
+.tree-decision{grid-column:1/-1;color:#9cdcfe;font-size:11px}
+.tree-result{color:#c586c0;font-weight:700}
+.detail-split{display:grid;grid-template-columns:1fr;gap:9px}
+.detail-title{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin:12px 0}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;overflow-x:auto}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.id{color:#9cdcfe}.num{color:#b5cea8}.str{color:#ce9178}.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px 0 16px}
+.progress{width:min(100%,640px);height:8px;border-radius:999px;border:1px solid #3e3e42;background:#2d2d2d;overflow:hidden}
+.progress-bar{height:100%;width:0;background:#569cd6}
+.button-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;min-width:70px;min-height:34px;padding:7px 14px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#343434}
+.nbtn:disabled{opacity:.35;cursor:default}
+#viewer-hotkeys{display:none!important}
+@media (max-width:900px){#main-content{grid-template-columns:1fr}#items-box,#runtime-box,#primary-box,#secondary-box{grid-column:1;grid-row:auto}#runtime-box{height:auto;overflow:visible}}
+@media (max-width:720px){body{padding:12px}.meta-grid{grid-template-columns:1fr}.dp-pair{grid-template-columns:1fr}.dp-table{min-width:calc(var(--cols) * 39px)}.dp-table td{height:30px}.nbtn{flex:1 1 88px}h1{font-size:18px;line-height:1.35}}
+</style>
+</head>
+<body>
+<h1>Zero-One Knapsack / 0-1 배낭 문제</h1>
+<p class="sub">제공하신 C++ 코드의 재귀 호출과 Bottom-Up 테이블 채우기를 비교합니다. 예시는 <code>values = {6, 5, 3}</code>, <code>weights = {3, 2, 1}</code>, <code>W = 5</code>입니다.</p>
+
+<div id="tabs"></div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend"></div>
+
+<div id="main-content">
+  <div id="left-panel">
+    <div class="sbox" id="items-box">
+      <div class="slabel">Items / 아이템 목록</div>
+      <div id="items-view"></div>
+    </div>
+    <div class="sbox" id="primary-box">
+      <div class="slabel" id="primary-title"></div>
+      <div id="primary-view"></div>
+    </div>
+    <div class="sbox" id="secondary-box">
+      <div class="slabel" id="secondary-title"></div>
+      <div id="secondary-view"></div>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div class="sbox" id="runtime-box">
+      <div class="slabel">Runtime State / 실행 상태</div>
+      <div class="meta-grid" id="runtime-view">
+        <div class="meta-card"><div class="meta-name" id="meta-a-name"></div><div class="meta-value" id="meta-a-val"></div><div class="meta-sub" id="meta-a-sub"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-b-name"></div><div class="meta-value" id="meta-b-val"></div><div class="meta-sub" id="meta-b-sub"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-c-name"></div><div class="meta-value" id="meta-c-val"></div><div class="meta-sub" id="meta-c-sub"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-d-name"></div><div class="meta-value" id="meta-d-val"></div><div class="meta-sub" id="meta-d-sub"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="code-panel">
+  <div id="code-title"></div>
+  <div id="code-body"></div>
+</div>
+
+<div id="nav">
+  <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="button-row">
+    <button class="nbtn" id="reset" type="button">Home</button>
+    <button class="nbtn" id="prev" type="button">Prev</button>
+    <button class="nbtn" id="auto-btn" type="button">Play</button>
+    <button class="nbtn" id="next" type="button">Next</button>
+    <button class="nbtn" id="last" type="button">End</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const values = [6, 5, 3];
+  const weights = [3, 2, 1];
+  const WMAX = 5;
+  const N = weights.length;
+  const modes = ['bottom', 'recur'];
+  let mode = 'bottom';
+  let current = 0;
+  let timer = null;
+
+  const refs = {
+    tabs: document.getElementById('tabs'),
+    counter: document.getElementById('step-counter'),
+    desc: document.getElementById('step-desc'),
+    legend: document.getElementById('legend'),
+    items: document.getElementById('items-view'),
+    runtime: document.getElementById('runtime-view'),
+    primaryTitle: document.getElementById('primary-title'),
+    primaryView: document.getElementById('primary-view'),
+    secondaryBox: document.getElementById('secondary-box'),
+    secondaryTitle: document.getElementById('secondary-title'),
+    secondaryView: document.getElementById('secondary-view'),
+    codeTitle: document.getElementById('code-title'),
+    codeBody: document.getElementById('code-body'),
+    progress: document.getElementById('progress-bar'),
+    reset: document.getElementById('reset'),
+    prev: document.getElementById('prev'),
+    next: document.getElementById('next'),
+    last: document.getElementById('last'),
+    auto: document.getElementById('auto-btn'),
+    metaAName: document.getElementById('meta-a-name'),
+    metaAVal: document.getElementById('meta-a-val'),
+    metaASub: document.getElementById('meta-a-sub'),
+    metaBName: document.getElementById('meta-b-name'),
+    metaBVal: document.getElementById('meta-b-val'),
+    metaBSub: document.getElementById('meta-b-sub'),
+    metaCName: document.getElementById('meta-c-name'),
+    metaCVal: document.getElementById('meta-c-val'),
+    metaCSub: document.getElementById('meta-c-sub'),
+    metaDName: document.getElementById('meta-d-name'),
+    metaDVal: document.getElementById('meta-d-val'),
+    metaDSub: document.getElementById('meta-d-sub')
+  };
+
+  const code = {
+    recur: {
+      title: 'int RecurZeroOneKnapsack(const vector<int>& weights, const vector<int>& values, int W, int n)',
+      lines: [
+        { indent: 0, text: 'int RecurZeroOneKnapsack(weights, values, W, n)' },
+        { indent: 0, text: '{' },
+        { indent: 1, text: 'if (n == 0 || W == 0) return 0;' },
+        { indent: 1, text: 'if (W < weights[n - 1]) {' },
+        { indent: 2, text: 'return RecurZeroOneKnapsack(weights, values, W, n - 1);' },
+        { indent: 1, text: '} else {' },
+        { indent: 2, text: 'return max(' },
+        { indent: 3, text: 'RecurZeroOneKnapsack(weights, values, W, n - 1),' },
+        { indent: 3, text: 'RecurZeroOneKnapsack(weights, values, W - weights[n - 1], n - 1) + values[n - 1]' },
+        { indent: 2, text: ');' },
+        { indent: 1, text: '}' },
+        { indent: 0, text: '}' }
+      ]
+    },
+    bottom: {
+      title: 'int ZeroOneKnapsack(vector<int> weights, vector<int> values, int W)',
+      lines: [
+        { indent: 0, text: 'vector<vector<int>> table(W + 1, vector<int>(weights.size() + 1, 0));' },
+        { indent: 0, text: 'vector<vector<vector<int>>> items(W + 1, vector<vector<int>>(weights.size() + 1, vector<int>(weights.size(), 0)));' },
+        { indent: 0, text: 'for (int w = 1; w <= W; w++) {' },
+        { indent: 1, text: 'for (int n = 1; n <= weights.size(); n++) {' },
+        { indent: 2, text: 'if (w < weights[n - 1]) {' },
+        { indent: 3, text: 'table[w][n] = table[w][n - 1];' },
+        { indent: 3, text: 'items[w][n] = items[w][n - 1];' },
+        { indent: 2, text: '} else {' },
+        { indent: 3, text: 'if (table[w][n - 1] > table[w - weights[n - 1]][n - 1] + values[n - 1]) {' },
+        { indent: 4, text: 'table[w][n] = table[w][n - 1];' },
+        { indent: 4, text: 'items[w][n] = items[w][n - 1];' },
+        { indent: 3, text: '} else {' },
+        { indent: 4, text: 'table[w][n] = table[w - weights[n - 1]][n - 1] + values[n - 1];' },
+        { indent: 4, text: 'items[w][n] = items[w - weights[n - 1]][n - 1];' },
+        { indent: 4, text: 'items[w][n][n - 1] += 1;' },
+        { indent: 3, text: '}' },
+        { indent: 2, text: '}' },
+        { indent: 1, text: '}' },
+        { indent: 0, text: '}' }
+      ]
+    }
+  };
+
+  function esc(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  function clone2(matrix) {
+    return matrix.map((row) => row.slice());
+  }
+
+  function clone3(cube) {
+    return cube.map((layer) => layer.map((row) => row.slice()));
+  }
+
+  function zeroItems() {
+    return Array.from({ length: WMAX + 1 }, () => Array.from({ length: N + 1 }, () => Array(N).fill(0)));
+  }
+
+  function itemBits(bits) {
+    return bits.join('');
+  }
+
+  function itemValue(bits) {
+    return bits.reduce((sum, bit, index) => sum + bit * values[index], 0);
+  }
+
+  function itemWeight(bits) {
+    return bits.reduce((sum, bit, index) => sum + bit * weights[index], 0);
+  }
+
+  function makeRecursiveSteps() {
+    const steps = [];
+    const stack = [];
+    const trace = [];
+    const treeNodes = new Map();
+    let rootId = null;
+    let nextId = 1;
+
+    function addTrace(text, currentLine = true) {
+      trace.push({ text, current: currentLine });
+      if (trace.length > 10) trace.shift();
+    }
+
+    function snapshotTree(currentId) {
+      return {
+        rootId,
+        currentId,
+        nodes: Array.from(treeNodes.values()).map((node) => ({
+          ...node,
+          children: node.children.slice()
+        }))
+      };
+    }
+
+    function pushStep(data, currentId = stack.length ? stack[stack.length - 1].id : null) {
+      const topFrame = stack.length ? stack[stack.length - 1] : null;
+      steps.push({
+        mode: 'recur',
+        branch: topFrame ? topFrame.branch : null,
+        stack: stack.map((frame) => ({ ...frame })),
+        trace: trace.map((line) => ({ ...line })),
+        tree: snapshotTree(currentId),
+        ...data
+      });
+    }
+
+    function recur(capacity, n, branch, parentId = null) {
+      const id = nextId;
+      nextId += 1;
+      const node = {
+        id,
+        parentId,
+        capacity,
+        n,
+        branch,
+        status: 'current',
+        decision: '호출 진입',
+        result: null,
+        skip: null,
+        take: null,
+        children: []
+      };
+      treeNodes.set(id, node);
+      if (parentId === null) {
+        rootId = id;
+      } else {
+        treeNodes.get(parentId).children.push(id);
+      }
+      stack.push({ id, capacity, n, branch, phase: 'enter' });
+      addTrace(`#${id} 호출: W=${capacity}, n=${n}`);
+      pushStep({
+        W: capacity, n, item: n, lines: [1, 2],
+        desc: `재귀 호출 #${id}: 남은 용량 W=${capacity}, 고려 아이템 수 n=${n}입니다.`,
+        formula: `<code>RecurZeroOneKnapsack(W=${capacity}, n=${n})</code>`,
+        decision: '호출 진입', result: ''
+      });
+
+      if (n === 0 || capacity === 0) {
+        node.status = 'returned';
+        node.decision = 'base case';
+        node.result = 0;
+        stack[stack.length - 1].phase = 'return';
+        addTrace(`#${id} base case → 0`);
+        pushStep({
+          W: capacity, n, item: n, lines: [3],
+          desc: '아이템이 없거나 용량이 0이면 담을 수 있는 가치는 0입니다.',
+          formula: '<code>n == 0 || W == 0</code>',
+          decision: 'base case', result: 0
+        });
+        stack.pop();
+        return 0;
+      }
+
+      const weight = weights[n - 1];
+      const value = values[n - 1];
+      if (capacity < weight) {
+        node.status = 'blocked';
+        node.decision = '용량 부족';
+        stack[stack.length - 1].phase = 'too-heavy';
+        addTrace(`#${id} item ${n}은 무거워서 제외`);
+        pushStep({
+          W: capacity, n, item: n, lines: [4, 5],
+          desc: `아이템 ${n}의 무게 ${weight}가 현재 용량 ${capacity}보다 커서 넣을 수 없습니다.`,
+          formula: `<code>${capacity} < weights[${n - 1}] (${weight})</code>`,
+          decision: '용량 부족', result: ''
+        });
+        const result = recur(capacity, n - 1, 'skip-only', id);
+        node.status = 'returned';
+        node.decision = '제외 반환';
+        node.result = result;
+        stack[stack.length - 1].phase = 'return';
+        addTrace(`#${id} 반환: ${result}`);
+        pushStep({
+          W: capacity, n, item: n, lines: [5],
+          desc: `아이템 ${n}을 제외한 결과 ${result}를 그대로 반환합니다.`,
+          formula: `<code>return ${result}</code>`,
+          decision: '제외 반환', result
+        });
+        stack.pop();
+        return result;
+      }
+
+      node.status = 'branching';
+      node.decision = '제외 분기 계산';
+      stack[stack.length - 1].phase = 'skip';
+      addTrace(`#${id} 제외 분기 계산`);
+      pushStep({
+        W: capacity, n, item: n, lines: [6, 7, 8],
+        desc: `아이템 ${n}을 넣지 않는 경우를 먼저 계산합니다.`,
+        formula: `<code>skip = Recur(W=${capacity}, n=${n - 1})</code>`,
+        decision: '제외 분기', result: ''
+      });
+      const skip = recur(capacity, n - 1, 'skip', id);
+      node.skip = skip;
+
+      node.status = 'branching';
+      node.decision = '포함 분기 계산';
+      stack[stack.length - 1].phase = 'take';
+      addTrace(`#${id} 포함 분기 계산`);
+      pushStep({
+        W: capacity, n, item: n, lines: [9],
+        desc: `아이템 ${n}을 넣는 경우입니다. 용량 ${weight}를 사용하고 가치 ${value}를 더합니다.`,
+        formula: `<code>take = Recur(W=${capacity - weight}, n=${n - 1}) + ${value}</code>`,
+        decision: '포함 분기', result: '', skip
+      });
+      const take = recur(capacity - weight, n - 1, 'take', id) + value;
+      node.take = take;
+
+      const result = Math.max(skip, take);
+      node.status = 'returned';
+      node.decision = take >= skip ? '포함 선택' : '제외 선택';
+      node.result = result;
+      stack[stack.length - 1].phase = 'return';
+      addTrace(`#${id} max(${skip}, ${take}) → ${result}`);
+      pushStep({
+        W: capacity, n, item: n, lines: [7, 8, 9, 10],
+        desc: `넣지 않는 값 ${skip}와 넣는 값 ${take} 중 더 큰 값을 선택합니다.`,
+        formula: `<code>max(${skip}, ${take}) = ${result}</code>`,
+        decision: take >= skip ? '포함 선택' : '제외 선택', result, skip, take
+      });
+      stack.pop();
+      return result;
+    }
+
+    const finalResult = recur(WMAX, N, 'root');
+    pushStep({
+      W: WMAX, n: N, item: 0, lines: [],
+      desc: `재귀 계산이 완료되었습니다. 최대 가치는 ${finalResult}입니다.`,
+      formula: `<code>return ${finalResult}</code>`,
+      decision: '완료', result: finalResult
+    });
+    return steps;
+  }
+
+  function makeBottomSteps() {
+    const steps = [];
+    const table = Array.from({ length: WMAX + 1 }, () => Array(N + 1).fill(0));
+    const items = zeroItems();
+
+    function pushStep(data) {
+      steps.push({ mode: 'bottom', ...data });
+    }
+
+    pushStep({
+      w: 0, n: 0, item: 0, source: 'init', value: 0, bits: Array(N).fill(0), lines: [1, 2],
+      desc: 'table과 items를 0으로 초기화합니다. w=0 또는 n=0인 base row/column은 모두 0입니다.',
+      formula: '<code>table[*][0] = table[0][*] = 0</code>',
+      decision: '초기화'
+    });
+
+    for (let w = 1; w <= WMAX; w += 1) {
+      pushStep({
+        w, n: 0, item: 0, source: 'for-w', value: table[w][0], bits: items[w][0].slice(), lines: [3],
+        desc: `바깥 for 루프가 용량 w=${w} 행으로 진입합니다.`,
+        formula: `<code>for (int w = ${w}; w <= W; w++)</code>`,
+        decision: 'w 루프 진입'
+      });
+
+      for (let n = 1; n <= N; n += 1) {
+        const weight = weights[n - 1];
+        const value = values[n - 1];
+        pushStep({
+          w, n, item: n, source: 'for-n', value: table[w][n], bits: items[w][n].slice(), lines: [4],
+          desc: `안쪽 for 루프가 아이템 n=${n}을 고려합니다.`,
+          formula: `<code>for (int n = ${n}; n <= weights.size(); n++)</code>`,
+          decision: 'n 루프 진입'
+        });
+
+        if (w < weight) {
+          table[w][n] = table[w][n - 1];
+          items[w][n] = items[w][n - 1].slice();
+          pushStep({
+            w, n, item: n, source: 'too-heavy', value: table[w][n], bits: items[w][n].slice(), committed: true, lines: [5, 6, 7],
+            desc: `용량 ${w}가 아이템 ${n}의 무게 ${weight}보다 작아 넣을 수 없습니다. 왼쪽 값을 복사합니다.`,
+            formula: `<code>${w} < weights[${n - 1}] (${weight})</code>`,
+            decision: '용량 부족'
+          });
+        } else {
+          const skip = table[w][n - 1];
+          const take = table[w - weight][n - 1] + value;
+          pushStep({
+            w, n, item: n, source: 'compare', value: table[w][n], bits: items[w][n].slice(), lines: [8, 9],
+            desc: `아이템 ${n}을 넣지 않는 값 ${skip}와 넣는 값 ${take}를 비교합니다.`,
+            formula: `<code>skip=${skip}, take=table[${w - weight}][${n - 1}] + ${value} = ${take}</code>`,
+            decision: '두 경우 비교', skip, take
+          });
+
+          if (skip > take) {
+            table[w][n] = skip;
+            items[w][n] = items[w][n - 1].slice();
+            pushStep({
+              w, n, item: n, source: 'skip', value: table[w][n], bits: items[w][n].slice(), committed: true, lines: [10, 11],
+              desc: `넣지 않는 경우 ${skip}가 더 큽니다. table[${w}][${n - 1}]을 가져옵니다.`,
+              formula: `<code>table[${w}][${n}] = table[${w}][${n - 1}]</code>`,
+              decision: '제외 선택', skip, take
+            });
+          } else {
+            table[w][n] = take;
+            items[w][n] = items[w - weight][n - 1].slice();
+            items[w][n][n - 1] += 1;
+            pushStep({
+              w, n, item: n, source: 'take', value: table[w][n], bits: items[w][n].slice(), committed: true, lines: [12, 13, 14, 15],
+              desc: `넣는 경우 ${take}가 더 크거나 같습니다. 아이템 ${n}을 선택합니다.`,
+              formula: `<code>table[${w}][${n}] = table[${w - weight}][${n - 1}] + ${value}</code>`,
+              decision: '포함 선택', skip, take
+            });
+          }
+        }
+      }
+    }
+
+    pushStep({
+      w: WMAX, n: N, item: 0, source: 'done', value: table[WMAX][N], bits: items[WMAX][N].slice(), lines: [],
+      desc: `Bottom-Up 계산이 완료되었습니다. 최대 가치는 ${table[WMAX][N]}입니다.`,
+      formula: `<code>return table[${WMAX}][${N}]</code>`,
+      decision: '완료'
+    });
+    return steps;
+  }
+
+  const stepsByMode = {
+    recur: makeRecursiveSteps(),
+    bottom: makeBottomSteps()
+  };
+  let steps = stepsByMode[mode];
+
+  function stateAt(stepIndex) {
+    const table = Array.from({ length: WMAX + 1 }, () => Array(N + 1).fill(0));
+    const items = zeroItems();
+    const bottomSteps = stepsByMode.bottom;
+    for (let index = 1; index <= stepIndex && index < bottomSteps.length - 1; index += 1) {
+      const step = bottomSteps[index];
+      if (!step.committed) continue;
+      table[step.w][step.n] = step.value;
+      items[step.w][step.n] = step.bits.slice();
+    }
+    return { table, items };
+  }
+
+  function renderItems(step) {
+    refs.items.innerHTML = `<div class="item-table-wrap"><table class="item-table">
+      <thead>
+        <tr>
+          <th>아이템</th>
+          <th>무게</th>
+          <th>가치</th>
+        </tr>
+      </thead>
+      <tbody>${weights.map((weight, index) => {
+      const itemNo = index + 1;
+      const classes = [];
+      if (step.item === itemNo) classes.push('active');
+      if (step.bits && step.bits[index]) classes.push('take');
+      return `<tr class="${classes.join(' ')}">
+        <td class="item-name">Item ${itemNo}</td>
+        <td>${weight}</td>
+        <td>${values[index]}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+  }
+
+  function cellClass(step, w, n, kind, value) {
+    const classes = [];
+    if (kind === 'table' && value === 0) classes.push('zero');
+    if (step.w === w && step.n === n) classes.push('current');
+    if (isSourceCell(step, w, n, kind)) classes.push('source');
+    if (step.source === 'done' && w === WMAX && n === N) classes.push('result');
+    return classes.join(' ');
+  }
+
+  function isSourceCell(step, w, n, kind) {
+    if (!step || step.item <= 0) return false;
+    const skipSource = step.w === w && step.n - 1 === n;
+    const takeSource = step.w - weights[step.item - 1] === w && step.n - 1 === n;
+
+    if (kind === 'table') {
+      if (step.source === 'compare') return skipSource || takeSource;
+      if (step.source === 'skip' || step.source === 'take') return skipSource || takeSource;
+      if (step.source === 'too-heavy') return skipSource;
+    }
+
+    if (kind === 'items') {
+      if (step.source === 'compare') return skipSource || takeSource;
+      if (step.source === 'skip' || step.source === 'take') return skipSource || takeSource;
+      if (step.source === 'too-heavy') return skipSource;
+    }
+
+    return false;
+  }
+
+  function isTakeSourceCell(step, w, n) {
+    return !!step
+      && step.item > 0
+      && (step.source === 'compare' || step.source === 'skip' || step.source === 'take')
+      && step.w - weights[step.item - 1] === w
+      && step.n - 1 === n;
+  }
+
+  function renderTable(state, step, kind) {
+    let html = `<div class="table-wrap"><table class="dp-table ${kind}-table" style="--cols:${N + 2}"><thead><tr><th>w\\n</th>`;
+    for (let n = 0; n <= N; n += 1) {
+      html += `<th>${n}${n > 0 ? `<span class="small">w${weights[n - 1]} v${values[n - 1]}</span>` : ''}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+    for (let w = 0; w <= WMAX; w += 1) {
+      html += `<tr><th>${w}</th>`;
+      for (let n = 0; n <= N; n += 1) {
+        const value = kind === 'items' ? itemBits(state.items[w][n]) : state.table[w][n];
+        const add = kind === 'table' && isTakeSourceCell(step, w, n)
+          ? `<span class="add-badge">+${values[step.item - 1]}</span>`
+          : '';
+        html += `<td class="${cellClass(step, w, n, kind, value)}"><span class="cell-main">${esc(value)}</span>${add}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  function branchLabel(branch) {
+    return {
+      root: '시작',
+      skip: '제외',
+      take: '포함',
+      'skip-only': '용량 부족 → 제외'
+    }[branch] || branch || '-';
+  }
+
+  function renderTree(step) {
+    const tree = step.tree || { rootId: null, currentId: null, nodes: [] };
+    const byId = new Map(tree.nodes.map((node) => [node.id, node]));
+
+    function renderNode(id) {
+      const node = byId.get(id);
+      if (!node) return '';
+      const classes = ['tree-card'];
+      if (node.id === tree.currentId) classes.push('current');
+      if (node.status === 'branching') classes.push('branching');
+      if (node.status === 'blocked') classes.push('blocked');
+      if (node.status === 'returned') classes.push('returned');
+      const compare = node.skip !== null && node.take !== null ? ` · skip ${node.skip}, take ${node.take}` : '';
+      const children = node.children.map(renderNode).join('');
+      return `<li>
+        <div class="${classes.join(' ')}">
+          <div class="tree-call">#${node.id}</div>
+          <div class="tree-meta">W=${node.capacity}, n=${node.n}</div>
+          <div class="tree-branch">${esc(branchLabel(node.branch))}</div>
+          <div class="tree-decision">${esc(node.decision)}${compare}<span class="tree-result"> ${node.result !== null ? `→ ${node.result}` : ''}</span></div>
+        </div>
+        ${children ? `<ul>${children}</ul>` : ''}
+      </li>`;
+    }
+
+    refs.primaryView.innerHTML = tree.rootId
+      ? `<div class="call-tree-wrap"><ul class="call-tree">${renderNode(tree.rootId)}</ul></div>`
+      : '<div class="trace-line">아직 생성된 호출이 없습니다.</div>';
+  }
+
+  function renderRecursiveDetails(step) {
+    const stack = step.stack || [];
+    const stackHtml = stack.length
+      ? `<div class="stack-list">${stack.map((frame, index) => (
+        `<div class="frame ${index === stack.length - 1 ? 'current' : ''}">
+          <div class="frame-id">#${frame.id}</div>
+          <div class="frame-main">W=${frame.capacity}, n=${frame.n}</div>
+          <div class="frame-sub">${esc(frame.phase)}</div>
+        </div>`
+      )).join('')}</div>`
+      : '<div class="trace-line">호출 스택이 비어 있습니다.</div>';
+    const traceHtml = `<div class="trace-list">${(step.trace || []).map((line, index, arr) => (
+      `<div class="trace-line ${index === arr.length - 1 || line.current ? 'current' : ''}">${esc(line.text)}</div>`
+    )).join('')}</div>`;
+    refs.secondaryView.innerHTML = `<div class="detail-split">
+      <div><div class="detail-title">Call Stack</div>${stackHtml}</div>
+      <div><div class="detail-title">Recent Trace</div>${traceHtml}</div>
+    </div>`;
+  }
+
+  function renderBottom(step) {
+    const state = stateAt(current);
+    refs.primaryView.innerHTML = `<div class="dp-pair">
+      <div class="dp-panel">
+        <div class="dp-panel-title">table[w][n] / 최대 가치</div>
+        ${renderTable(state, step, 'table')}
+      </div>
+      <div class="dp-panel">
+        <div class="dp-panel-title">items[w][n] / 선택 벡터</div>
+        ${renderTable(state, step, 'items')}
+      </div>
+    </div>`;
+    refs.secondaryView.innerHTML = '';
+  }
+
+  function syntax(line) {
+    return esc(line)
+      .replace(/(&quot;.*?&quot;|&#39;.*?&#39;)/g, '<span class="str">$1</span>')
+      .replace(/\b(vector|int|return|if|else|for|const)\b/g, '<span class="kw">$1</span>')
+      .replace(/\b(RecurZeroOneKnapsack|ZeroOneKnapsack|max|size)\b/g, '<span class="fn">$1</span>')
+      .replace(/\b(weights|values|table|items|W|n|w)\b/g, '<span class="id">$1</span>')
+      .replace(/\b\d+\b/g, '<span class="num">$&</span>');
+  }
+
+  function renderCode(step) {
+    const active = new Set(step.lines || []);
+    refs.codeTitle.textContent = code[mode].title;
+    refs.codeBody.innerHTML = code[mode].lines.map((line, index) => {
+      const no = index + 1;
+      return `<div class="cline ${active.has(no) ? 'hl' : ''}">
+        <div class="lnum">${no}</div>
+        <div class="lcode" style="--indent:${line.indent}">${syntax(line.text)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderMeta(step) {
+    if (mode === 'recur') {
+      refs.runtime.className = 'meta-grid';
+      refs.runtime.innerHTML = [
+        `<div class="meta-card"><div class="meta-name">Call</div><div class="meta-value">W=${step.W ?? '-'}, n=${step.n ?? '-'}</div><div class="meta-sub">recursive state</div></div>`,
+        `<div class="meta-card"><div class="meta-name">Item</div><div class="meta-value">${step.item ? `#${step.item}` : '-'}</div><div class="meta-sub">${step.item ? `weight ${weights[step.item - 1]}, value ${values[step.item - 1]}` : 'none'}</div></div>`,
+        `<div class="meta-card"><div class="meta-name">Decision</div><div class="meta-value">${esc(step.decision || '-')}</div><div class="meta-sub">${esc(step.source || step.branch || '-')}</div></div>`,
+        `<div class="meta-card"><div class="meta-name">Value</div><div class="meta-value">${step.result ?? step.value ?? '-'}</div><div class="meta-sub">${step.take !== undefined ? `skip ${step.skip}, take ${step.take}` : 'current result'}</div></div>`
+      ].join('');
+      return;
+    }
+
+    const state = stateAt(current);
+    const w = step.w ?? 0;
+    const n = step.n ?? 0;
+    const base = w === 0 || n === 0 || step.source === 'init';
+    const itemWeightValue = n > 0 ? weights[n - 1] : null;
+    const itemValueValue = n > 0 ? values[n - 1] : null;
+    const heavy = !base && w < itemWeightValue;
+    const canTake = !base && w >= itemWeightValue;
+    const currentValue = state.table[w]?.[n] ?? step.value ?? 0;
+    const skipValue = n > 0 ? state.table[w][n - 1] : 0;
+    const takeBaseW = canTake ? w - itemWeightValue : null;
+    const takeBaseValue = canTake ? state.table[takeBaseW][n - 1] : null;
+    const takeValue = canTake ? (step.take ?? takeBaseValue + itemValueValue) : null;
+    const chosen = step.source === 'skip' ? `K(${w}, ${n - 1})`
+      : step.source === 'take' ? `K(${takeBaseW}, ${n - 1}) + ${itemValueValue}`
+      : step.source === 'too-heavy' ? `K(${w}, ${n - 1})`
+      : step.source === 'done' ? `K(${w}, ${n})`
+      : '-';
+    const resultValue = step.source === 'compare' || step.source === 'for-n' ? '-' : (step.value ?? currentValue);
+
+    function status(active) {
+      return active ? '<span class="case-status">현재 구간</span>' : '<span class="case-status">대상 아님</span>';
+    }
+
+    function sourceRow(kind, label, cell, value) {
+      return `<div class="source-row ${kind}">
+        <div class="source-label">${label}</div>
+        <div class="source-cell">${cell}</div>
+        <div class="source-value">${value}</div>
+      </div>`;
+    }
+
+    refs.runtime.className = 'runtime-state';
+    refs.runtime.innerHTML = `
+      <div class="runtime-current">
+        <div class="meta-name">Current Cell / 현재 셀</div>
+        <div class="meta-value">table[${w}][${n}] = K(${w}, ${n})</div>
+        <div class="meta-sub">판정: ${esc(step.decision || '-')} · 현재 값: ${resultValue}</div>
+      </div>
+
+      <div class="case-card ${base ? 'active' : ''}">
+        <div class="case-title">1. 기저조건</div>
+        <div class="case-desc">배낭 용량이 0이거나 고려할 아이템이 0개이면 가치는 0입니다.</div>
+        <div class="case-formula">K(0, n) = 0, K(W, 0) = 0</div>
+        ${status(base)}
+        ${base ? `<div class="source-list">${sourceRow('result', '결과', `K(${w}, ${n})`, 0)}</div>` : ''}
+      </div>
+
+      <div class="case-card heavy ${heavy ? 'active' : ''}">
+        <div class="case-title">2. 현재 아이템이 용량보다 무거운 경우</div>
+        <div class="case-desc">n번째 아이템을 넣을 수 없으므로 현재 아이템을 제외한 값을 그대로 가져옵니다.</div>
+        <div class="case-formula">if (W &lt; weights[n - 1]) &nbsp; K(W, n) = K(W, n - 1)</div>
+        ${status(heavy)}
+        ${heavy ? `<div class="source-list">${sourceRow('skip', '가져옴', `K(${w}, ${n - 1})`, skipValue)}</div>` : ''}
+      </div>
+
+      <div class="case-card can-take ${canTake ? 'active' : ''}">
+        <div class="case-title">3. 현재 아이템을 넣을 수 있는 경우</div>
+        <div class="case-desc">넣지 않는 경우와 넣는 경우를 비교해서 더 큰 값을 선택합니다.</div>
+        <div class="case-formula">K(W, n) = max(K(W, n - 1), K(W - weights[n - 1], n - 1) + values[n - 1])</div>
+        ${status(canTake)}
+        ${canTake ? `<div class="source-list">
+          ${sourceRow('skip', '3.1 제외', `K(${w}, ${n - 1})`, skipValue)}
+          ${sourceRow('take', '3.2 포함', `K(${takeBaseW}, ${n - 1}) = ${takeBaseValue} + value ${itemValueValue}`, takeValue)}
+          ${sourceRow('result', '선택', chosen, resultValue)}
+        </div>` : ''}
+      </div>`;
+  }
+
+  function renderLegend() {
+    const items = [
+      { label: '현재 셀/호출', fill: 'rgba(247,178,103,.16)', stroke: '#f7b267' },
+      { label: '가져오는 값', fill: 'rgba(78,201,176,.16)', stroke: '#4ec9b0' },
+      { label: '최종 결과', fill: 'rgba(197,134,192,.18)', stroke: '#c586c0' }
+    ];
+    refs.legend.innerHTML = items.map((item) => `<div class="leg"><div class="leg-c" style="background:${item.fill};border-color:${item.stroke}"></div>${item.label}</div>`).join('');
+  }
+
+  function renderTabs() {
+    refs.tabs.innerHTML = [
+      `<button class="tab-btn ${mode === 'bottom' ? 'active' : ''}" data-mode="bottom" type="button">ZeroOneKnapsack / Bottom-Up</button>`,
+      `<button class="tab-btn ${mode === 'recur' ? 'active' : ''}" data-mode="recur" type="button">RecurZeroOneKnapsack / 재귀</button>`
+    ].join('');
+    refs.tabs.querySelectorAll('button').forEach((button) => {
+      button.addEventListener('click', () => {
+        stopAuto();
+        mode = button.dataset.mode;
+        steps = stepsByMode[mode];
+        current = 0;
+        renderTabs();
+        renderStep();
+      });
+    });
+  }
+
+  function renderStep() {
+    const step = steps[current];
+    refs.counter.textContent = `Step ${current + 1} / ${steps.length}`;
+    refs.desc.innerHTML = `<div class="desc-main">${esc(step.desc)}</div><div class="desc-formula">${step.formula}</div>`;
+    refs.primaryTitle.textContent = mode === 'recur' ? 'Recursive Call Tree / 재귀 호출 트리' : 'DP Tables / 실제 자료구조 table[w][n], items[w][n]';
+    refs.secondaryTitle.textContent = mode === 'recur' ? 'Call Stack & Trace / 호출 스택과 흐름' : 'items[w][n] / 아이템 선택 벡터';
+    refs.secondaryBox.style.display = mode === 'recur' ? '' : 'none';
+    renderItems(step);
+    renderMeta(step);
+    if (mode === 'recur') {
+      renderTree(step);
+      renderRecursiveDetails(step);
+    } else {
+      renderBottom(step);
+    }
+    renderCode(step);
+    refs.progress.style.width = `${steps.length <= 1 ? 100 : (current / (steps.length - 1)) * 100}%`;
+    refs.prev.disabled = current === 0;
+    refs.reset.disabled = current === 0;
+    refs.next.disabled = current === steps.length - 1;
+    refs.last.disabled = current === steps.length - 1;
+  }
+
+  function setStep(index) {
+    current = Math.max(0, Math.min(steps.length - 1, index));
+    renderStep();
+  }
+
+  function stopAuto() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    refs.auto.textContent = 'Play';
+  }
+
+  function toggleAuto() {
+    if (timer) {
+      stopAuto();
+      return;
+    }
+    refs.auto.textContent = 'Pause';
+    timer = setInterval(() => {
+      if (current >= steps.length - 1) {
+        stopAuto();
+        return;
+      }
+      setStep(current + 1);
+    }, 550);
+  }
+
+  refs.reset.addEventListener('click', () => setStep(0));
+  refs.prev.addEventListener('click', () => setStep(current - 1));
+  refs.next.addEventListener('click', () => setStep(current + 1));
+  refs.last.addEventListener('click', () => setStep(steps.length - 1));
+  refs.auto.addEventListener('click', toggleAuto);
+  document.addEventListener('keydown', (event) => {
+    if (event.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+    if (event.code === 'ArrowRight') setStep(current + 1);
+    if (event.code === 'ArrowLeft') setStep(current - 1);
+    if (event.code === 'Home') setStep(0);
+    if (event.code === 'End') setStep(steps.length - 1);
+    if (event.code === 'Space') {
+      event.preventDefault();
+      toggleAuto();
+    }
+  });
+
+  renderLegend();
+  renderTabs();
+  renderStep();
+})();
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>
+
