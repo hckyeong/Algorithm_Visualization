@@ -238,9 +238,9 @@ const HEAP_POS = {
   5: { x: 300, y: 252 },
   6: { x: 460, y: 252 },
   7: { x: 620, y: 252 },
-  8: { x: 100, y: 356 },
-  9: { x: 180, y: 356 },
-  10: { x: 260, y: 356 }
+  8: { x: 80, y: 356 },
+  9: { x: 200, y: 356 },
+  10: { x: 320, y: 356 }
 };
 
 const NODE_STYLE = {
@@ -640,7 +640,19 @@ function buildSteps() {
     else insert(pair.index, pair.key, index);
   });
 
-  pushStep({ opIndex: 6, opLabel: 'while (!pq.Empty()) 시작', currentPair: null, phase: 'drain', desc: '이제 빌드가 끝났으므로 while (!pq.Empty()) 루프로 들어가 최소 원소를 하나씩 꺼낸다.', action: 'DelMin 반복 시작', code: [13, 14, 15] });
+  const activeHeapPositions = Array.from({ length: state.size }, (_, index) => index + 1);
+  const activeIndices = state.pq.slice(1, state.size + 1).filter((index) => index !== -1);
+  pushStep({
+    opIndex: 6,
+    opLabel: 'while (!pq.Empty()) 시작',
+    currentPair: null,
+    phase: 'drain',
+    desc: '모든 입력 pair 처리가 끝났다. 현재 IndexMinPQ에 남아 있는 활성 값들을 확인한 뒤 while (!pq.Empty()) 루프로 들어간다.',
+    action: `활성 index = [${activeIndices.join(', ')}]`,
+    code: [13, 14, 15],
+    doneHeap: activeHeapPositions,
+    touchIndices: activeIndices
+  });
   while (state.size > 0) delMin(6);
   pushStep({ opIndex: 6, opLabel: '완료', currentPair: null, phase: 'drain', desc: 'priority queue가 비어서 모든 DelMin() 반복이 끝났다. 출력 순서는 key 기준 오름차순이다.', action: 'pq.Empty() == true', code: [13, 16] });
 }
