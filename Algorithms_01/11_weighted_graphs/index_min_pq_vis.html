@@ -50,6 +50,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 .arr-main{font-size:13px;font-weight:700;color:#d4d4d4;line-height:1.25}
 .arr-sub{font-size:10px;color:#858585;line-height:1.2}
 .arr-cell.empty .arr-main,.arr-cell.empty .arr-sub{color:#555}
+.arr-cell.sentinel .arr-main{color:#555}
 .arr-cell.current{border-color:#f7b267;background:rgba(247,178,103,.1)}
 .arr-cell.compare{border-color:#8b7cff;background:rgba(139,124,255,.1)}
 .arr-cell.swap{border-color:#569cd6;background:rgba(86,156,214,.12)}
@@ -705,7 +706,8 @@ function renderArray(container, values, labels, options, step) {
     const cell = document.createElement('div');
     const realIndex = options.offset + idx;
     const status = options.statusFn(step, realIndex);
-    cell.className = `arr-cell ${status}`.trim();
+    const extraClass = options.extraClassFn ? options.extraClassFn(value, realIndex, step) : '';
+    cell.className = `arr-cell ${status} ${extraClass}`.trim();
     const label = document.createElement('div');
     label.className = 'arr-label';
     label.textContent = `${labels}${realIndex}`;
@@ -905,7 +907,8 @@ function render(step) {
       offset: 0,
       statusFn: qpCellStatus,
       mainText: (value) => String(value),
-      subText: () => ''
+      subText: () => '',
+      extraClassFn: (value) => value === -1 ? 'sentinel' : ''
     },
     step
   );

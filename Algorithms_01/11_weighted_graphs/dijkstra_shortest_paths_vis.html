@@ -35,6 +35,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 .adj-slot{width:40px;min-height:54px;border:1px solid #7b7b7b;border-radius:6px;background:#424242;color:#ededed;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;transition:all .2s}
 .adj-arrow{font-size:20px;line-height:1;color:#8c8c8c;flex-shrink:0}
 .adj-list{display:flex;gap:10px;flex-wrap:wrap}
+.adj-empty{font-size:11px;color:#666;align-self:center;padding:0 2px}
 .adj-card{min-width:136px;border:1px solid #1a8a6e;border-radius:6px;background:rgba(22,118,96,.42);padding:8px 12px;text-align:center;transition:all .2s}
 .adj-main{font-size:14px;font-weight:700;color:#b9f5e4;line-height:1.25}
 .adj-weight{font-size:11px;color:#7de4cb;line-height:1.35;margin-top:2px}
@@ -125,12 +126,13 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 .nbtn:hover:not(:disabled){background:#3e3e42}
 .nbtn:disabled{opacity:.3;cursor:default}
 #dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:640px;justify-content:center}
-.dot{width:6px;height:6px;border-radius:50%;background:#3e3e42}
+.dot{width:6px;height:6px;border:0;padding:0;border-radius:50%;background:#3e3e42;appearance:none;-webkit-appearance:none;cursor:pointer}
 .dot.active{background:#858585}
 @media (max-width:1180px){#main-content{flex-direction:column}#left-panel,#right-panel{flex:1 1 auto}#flow-panels{grid-template-columns:1fr}.flow-card.print-card{grid-column:auto;max-width:none;justify-self:stretch}}
 @media (max-width:760px){.meta-grid{grid-template-columns:1fr}}
 @media (max-width:760px){.overall-branch,.relax-branch,.relax-compare-branch,.print-branch{grid-template-columns:1fr;max-width:250px}.flow-card{overflow:hidden}.relax-compare-branch .flow-node{width:200px;max-width:200px}.relax-compare-branch [data-node="update"]{margin-top:0}.relax-queue-branch{grid-template-columns:repeat(2,minmax(88px,1fr));max-width:190px}}
 @media (max-width:560px){body{padding:12px}#step-desc{min-height:78px}.nbtn{padding:6px 16px}.arr-cell{width:56px}#dist-grid .arr-cell,#prev-grid .arr-cell{width:46px;min-height:28px;padding:3px 6px}.flow-body{padding:10px 12px 14px}.flow-node{width:210px;max-width:210px;font-size:10px}.relax-card .flow-node{width:200px;max-width:200px}.relax-compare-branch .flow-node{width:200px;max-width:200px}.overall-branch,.relax-branch,.relax-compare-branch,.print-branch{max-width:220px}.relax-queue-branch{grid-template-columns:1fr;max-width:118px}#adj-header{grid-template-columns:1fr;gap:8px}.adj-row{align-items:flex-start}.adj-slot{min-height:48px}.adj-card{min-width:120px;flex:1 1 120px}}
+@media (max-width:560px){#dots{display:none!important}#nav{flex-direction:row!important;align-items:center!important;gap:8px!important}.nbtn{flex:1 1 0;min-width:0;padding:7px 8px}}
 </style>
 </head>
 <body>
@@ -153,7 +155,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
         <g id="node-group"></g>
         <g id="dist-group"></g>
       </svg>
-      <div class="graph-note">CLRS p.621 예제 그래프를 사용합니다. source는 0이고, 간선 가중치와 방향을 그대로 표시합니다. `DelMin()`으로 꺼낸 정점이 초록색으로 확정되고, 완화에 성공한 간선은 보라색으로 강조됩니다.</div>
+      <div class="graph-note">CLRS p.621 예제 그래프를 사용합니다. 처음에는 간선이 없는 EdgeWeightedDigraph에서 시작하고, AddEdge(e)가 호출될 때마다 graph와 adj 카드에 간선이 하나씩 나타납니다. source는 0입니다.</div>
     </div>
     <div id="adj-panel">
       <div id="adj-header">
@@ -167,7 +169,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
         </div>
       </div>
       <div id="adj-rows"></div>
-      <div class="adj-note">회색 슬롯은 시작 정점 인덱스이고, 초록 카드들은 DirectedEdge 객체입니다. 현재 Relax 중인 정점과 간선은 step에 맞춰 같이 강조됩니다.</div>
+      <div class="adj-note">회색 슬롯은 시작 정점 인덱스이고, 초록 카드들은 DirectedEdge 객체입니다. AddEdge 단계에서는 방금 push_back 된 간선이 주황색으로, Relax 단계에서는 현재 확인 중인 간선과 갱신 간선이 강조됩니다.</div>
     </div>
   </div>
   <div id="right-panel">
@@ -189,7 +191,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
   </div>
 </div>
 <div id="code-panel">
-  <div class="code-title">DijkstraShortestPaths() / Relax() / main()</div>
+  <div class="code-title">EdgeWeightedDigraph::AddEdge() / DijkstraShortestPaths() / Relax() / main()</div>
   <div id="code-body"></div>
 </div>
 <div id="flow-panels">
@@ -199,6 +201,8 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
       <div class="flow-scroll">
         <div class="flowchart">
           <div class="flow-node" data-flow="overall" data-node="prepare">입력 그래프와 가중치 정보를 준비한다</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-flow="overall" data-node="build-adj">AddEdge로 adj 벡터에 간선을 차례대로 추가한다</div>
           <div class="flow-arrow">↓</div>
           <div class="flow-node" data-flow="overall" data-node="init">prev, dist, 우선순위 큐를 초기 상태로 만든다</div>
           <div class="flow-arrow">↓</div>
@@ -387,6 +391,12 @@ const CODE = [
   '    EdgeWeightedDigraph g(5);',
   '    for (auto e : edges) g.AddEdge(e);',
   '    DijkstraShortestPaths d(g, 0);',
+  '}',
+  '',
+  'void EdgeWeightedDigraph::AddEdge(DirectedEdge e)',
+  '{',
+  '    adj[e.From()].push_back(e);',
+  '    num_edges += 1;',
   '}'
 ];
 
@@ -427,9 +437,9 @@ function esc(text) {
 function syntaxHighlight(line) {
   return esc(line)
     .replace(/\b(for|while|if|else|int|double|return)\b/g, '<span class="kw">$1</span>')
-    .replace(/\b(DijkstraShortestPaths|Relax|PrintPaths|Contains|DecreaseKey|Insert|DelMin|Empty|To|Weight|AddEdge)\b/g, '<span class="fn">$1</span>')
+    .replace(/\b(DijkstraShortestPaths|Relax|PrintPaths|Contains|DecreaseKey|Insert|DelMin|Empty|To|From|Weight|AddEdge)\b/g, '<span class="fn">$1</span>')
     .replace(/\b(EdgeWeightedDigraph|DirectedEdge|vector)\b/g, '<span class="tp">$1</span>')
-    .replace(/\b(prev|dist|pq|g|s|v|w|e|new_dist|edges|infinity)\b/g, '<span class="id">$1</span>')
+    .replace(/\b(prev|dist|pq|g|s|v|w|e|new_dist|edges|num_edges|infinity)\b/g, '<span class="id">$1</span>')
     .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
 }
 
@@ -511,7 +521,8 @@ function cloneState(state) {
     formula: state.formula,
     code: state.code.slice(),
     phase: state.phase,
-    printVertex: state.printVertex
+    printVertex: state.printVertex,
+    edgeBuildCount: state.edgeBuildCount
   };
 }
 
@@ -525,6 +536,7 @@ function pushStep(state, data) {
   state.code = data.code || [];
   state.phase = data.phase || state.phase || 'build';
   state.printVertex = data.printVertex === undefined ? null : data.printVertex;
+  state.edgeBuildCount = data.edgeBuildCount === undefined ? state.edgeBuildCount : data.edgeBuildCount;
   STEP_STATE.push(cloneState(state));
 }
 
@@ -533,6 +545,11 @@ function sortedPq(pqKeys) {
     .filter((id) => pqKeys[id] !== null)
     .sort((a, b) => pqKeys[a] - pqKeys[b] || a - b)
     .map((id) => ({ index: id, key: pqKeys[id] }));
+}
+
+function visibleEdgesFor(step) {
+  const count = Number.isInteger(step.edgeBuildCount) ? step.edgeBuildCount : GRAPH.edges.length;
+  return GRAPH.edges.slice(0, Math.max(0, Math.min(GRAPH.edges.length, count)));
 }
 
 function buildSteps() {
@@ -549,13 +566,37 @@ function buildSteps() {
     formula: '',
     code: [],
     phase: 'init',
-    printVertex: null
+    printVertex: null,
+    edgeBuildCount: 0
   };
 
+  const adj = {};
+  GRAPH.nodes.forEach((v) => { adj[v] = []; });
+
   pushStep(state, {
-    desc: '그래프와 가중치가 준비된 초기 상태다. dist는 모두 무한대, prev는 모두 -1, IndexMinPQ는 비어 있다.',
-    formula: 'dist = [0 전까지 모두 ∞], prev = [-1, -1, -1, -1, -1]',
-    code: [29, 31, 32, 33, 35, 36, 37],
+    desc: '간선 목록 edges를 준비하고 EdgeWeightedDigraph g(5)를 만든다. 아직 adj의 각 내부 vector는 비어 있다.',
+    formula: 'adj = [[], [], [], [], []], num_edges = 0',
+    code: [29, 31, 32, 33, 34, 35, 36],
+    phase: 'build',
+    edgeBuildCount: 0
+  });
+
+  GRAPH.edges.forEach((e, index) => {
+    adj[e.from].push(e);
+    state.edgeBuildCount = index + 1;
+    pushStep(state, {
+      activeEdge: [e.from, e.to],
+      desc: `g.AddEdge(e)가 DirectedEdge(${e.from}, ${e.to}, ${e.weight.toFixed(1)})를 adj[${e.from}] 내부 vector에 push_back 한다.`,
+      formula: `adj[${e.from}].push_back(${e.from}->${e.to}, w=${e.weight.toFixed(1)}) | num_edges = ${state.edgeBuildCount}`,
+      code: [37, 41, 43, 44],
+      phase: 'build'
+    });
+  });
+
+  pushStep(state, {
+    desc: 'adj 구성이 끝난 뒤 DijkstraShortestPaths 생성자가 prev, dist, IndexMinPQ를 초기화한다.',
+    formula: 'dist = [∞, ∞, ∞, ∞, ∞], prev = [-1, -1, -1, -1, -1], pq = empty',
+    code: [1, 2, 3, 4, 5],
     phase: 'init'
   });
 
@@ -566,12 +607,8 @@ function buildSteps() {
     formula: `dist[${GRAPH.source}] = 0.0, pq = { ${GRAPH.source}:0.0 }`,
     code: [6, 7],
     updatedVertices: [GRAPH.source],
-    phase: 'build'
+    phase: 'seed'
   });
-
-  const adj = {};
-  GRAPH.nodes.forEach((v) => { adj[v] = []; });
-  GRAPH.edges.forEach((e) => adj[e.from].push(e));
 
   while (sortedPq(state.pqKeys).length) {
     const minEntry = sortedPq(state.pqKeys)[0];
@@ -800,7 +837,7 @@ function drawGraph(step) {
   nodeGroup.innerHTML = '';
   distGroup.innerHTML = '';
 
-  GRAPH.edges.forEach((edge) => {
+  visibleEdgesFor(step).forEach((edge) => {
     const from = edge.from;
     const to = edge.to;
     const route = CURVES[`${from}-${to}`] || reciprocalCurveControl(edge);
@@ -961,6 +998,7 @@ function renderPaths(step) {
 }
 
 function adjRowState(step, v) {
+  if (step.phase === 'build' && step.activeEdge && step.activeEdge[0] === v) return 'current';
   if (step.currentVertex === v) return 'current';
   if (step.settled.includes(v)) return 'done';
   if (step.pqKeys[v] !== null) return 'queue';
@@ -981,11 +1019,11 @@ function renderAdj(step) {
     const rowState = adjRowState(step, v);
     row.className = `adj-row ${rowState}`.trim();
 
-    const edges = GRAPH.edges.filter((edge) => edge.from === v);
-    const cards = edges.map((edge) => {
+    const edges = visibleEdgesFor(step).filter((edge) => edge.from === v);
+    const cards = edges.length ? edges.map((edge) => {
       const edgeState = adjEdgeState(step, edge);
       return `<div class="${`adj-card ${edgeState}`.trim()}"><div class="adj-main">${edge.from}→${edge.to}</div><div class="adj-weight">w:${edge.weight.toFixed(1)}</div></div>`;
-    }).join('');
+    }).join('') : '<span class="adj-empty">empty</span>';
 
     row.innerHTML = `<div class="adj-slot">${v}</div><div class="adj-arrow">→</div><div class="adj-list">${cards}</div>`;
     adjRows.appendChild(row);
@@ -1003,27 +1041,31 @@ function setFlowNodes(flowName, activeNodes, doneNodes) {
 }
 
 function overallFlowState(step) {
-  if (step.phase === 'init') {
-    return { active: ['prepare', 'init'], done: [] };
+  if (step.phase === 'build') {
+    return { active: ['build-adj'], done: ['prepare'] };
   }
 
-  if (step.phase === 'build') {
-    return { active: ['seed'], done: ['prepare', 'init'] };
+  if (step.phase === 'init') {
+    return { active: ['init'], done: ['prepare', 'build-adj'] };
+  }
+
+  if (step.phase === 'seed') {
+    return { active: ['seed'], done: ['prepare', 'build-adj', 'init'] };
   }
 
   if (step.phase === 'relax') {
     if (step.code.includes(8) || step.code.includes(9)) {
-      return { active: ['check', 'delmin', 'relax'], done: ['prepare', 'init', 'seed'] };
+      return { active: ['check', 'delmin', 'relax'], done: ['prepare', 'build-adj', 'init', 'seed'] };
     }
-    return { active: ['relax'], done: ['prepare', 'init', 'seed', 'check', 'delmin'] };
+    return { active: ['relax'], done: ['prepare', 'build-adj', 'init', 'seed', 'check', 'delmin'] };
   }
 
   if (step.phase === 'done') {
-    return { active: ['finish'], done: ['prepare', 'init', 'seed', 'check', 'delmin', 'relax'] };
+    return { active: ['finish'], done: ['prepare', 'build-adj', 'init', 'seed', 'check', 'delmin', 'relax'] };
   }
 
   if (step.phase === 'print') {
-    return { active: ['finish'], done: ['prepare', 'init', 'seed', 'check', 'delmin', 'relax'] };
+    return { active: ['finish'], done: ['prepare', 'build-adj', 'init', 'seed', 'check', 'delmin', 'relax'] };
   }
 
   return { active: ['prepare'], done: [] };
