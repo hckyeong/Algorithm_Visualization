@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kruskal MST / 크루스칼 최소 신장 트리</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacing:.5px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:60px;line-height:1.6;padding:8px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#step-code{margin-top:6px;background:#1e1e1e;border:1px solid #3e3e42;border-left:3px solid #dcdcaa;border-radius:0 4px 4px 0;overflow:hidden}
+.step-code-label{padding:4px 10px;border-bottom:1px solid #3e3e42;color:#858585;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+#step-code-lines{padding:4px 0;height:calc(var(--step-code-row-count,1) * 21px + 8px);overflow:auto}
+.step-code-row{display:flex;height:21px}
+.step-code-line{width:38px;text-align:right;padding:3px 10px 3px 0;color:#666;font-size:11px;flex-shrink:0}
+.step-code-text{position:relative;flex:1;padding:3px 10px 3px calc(var(--indent,0) * 18px + 10px);color:#d4d4d4;font-size:12px;line-height:1.45;white-space:pre;overflow-x:auto}
+.step-code-text::before{content:'';position:absolute;left:10px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.1) 13px 14px,transparent 14px 18px);pointer-events:none}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:18px;height:4px;border-radius:999px}
+#mode-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tab-btn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;border-radius:4px;padding:6px 14px;font-family:inherit;font-size:12px;cursor:pointer}
+.tab-btn.active{border-color:#569cd6!important;background:rgba(86,156,214,.16)!important;color:#d9ecff!important}
+#main-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"graph uf" "edges edges" "output output";align-items:stretch;gap:14px;margin:12px 0}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:10px 12px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#graph-panel{grid-area:graph;display:flex;flex-direction:column;height:456px;min-height:0;overflow:hidden}
+#uf-panel{grid-area:uf;display:flex;flex-direction:column;height:456px;min-height:0;overflow:hidden}
+#edges-panel{grid-area:edges}
+#output-panel{grid-area:output}
+#graph-svg,#tree-svg{width:100%;display:block}
+#graph-svg{flex:1 1 auto;height:100%;min-height:0}
+.graph-note,.uf-note,.edges-note{font-size:11px;color:#858585;margin-top:8px;line-height:1.55}
+.metric-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.metric-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:58px}
+.metric-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.metric-value{font-size:17px;font-weight:700;color:#dcdcaa;line-height:1.3}
+#qf-view,#qu-view{display:none;min-height:0}
+#qf-view.active,#qu-view.active{display:flex;flex-direction:column;flex:1 1 0;min-height:0;background:transparent!important;border-color:transparent!important;color:#d4d4d4!important}
+#tree-scroll{flex:1 1 0;height:0;min-height:0;overflow:auto;border:1px solid #343434;border-radius:6px;background:#1e1e1e}
+#tree-svg{min-width:780px;height:360px}
+.group-grid{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+.group-cell{width:56px;min-width:56px;min-height:52px;border:1px solid #3e3e42;border-radius:6px;background:#1f1f1f;padding:5px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .2s}
+.group-cell.changed{border-color:#3e3e42;background:#1f1f1f}
+.group-label{font-size:10px;color:#666}
+.group-value{font-size:13px;font-weight:700;color:#d4d4d4}
+.edges-list{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+.edge-card{width:80px;min-width:80px;border:1px solid #3e3e42;border-radius:6px;background:#1f1f1f;padding:5px 6px;text-align:center;transition:all .2s}
+.edge-card.current{border-color:#f7b267;background:rgba(247,178,103,.14)}
+.edge-card.accept{border-color:#4ec9b0;background:rgba(78,201,176,.11)}
+.edge-card.reject{border-color:#f44747;background:rgba(244,71,71,.1)}
+.edge-main{font-size:11px;font-weight:700;color:#d4d4d4;line-height:1.2;white-space:nowrap}
+.edge-weight{font-size:9px;color:#858585;line-height:1.25;margin-top:1px}
+#output-lines{height:calc(var(--output-row-count,9) * 22px + 12px);overflow:auto;background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:6px 0}
+.output-row{display:flex;min-height:22px;line-height:22px}
+.output-row.new{background:rgba(220,220,170,.08);border-left:2px solid #dcdcaa}
+.output-line-no{width:38px;text-align:right;padding-right:10px;color:#555;font-size:11px;flex-shrink:0}
+.output-text{flex:1;color:#d4d4d4;font-size:12px;white-space:pre}
+.output-empty{color:#555;font-size:12px;padding:3px 10px}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
+.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre}
+.lcode::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:680px;justify-content:center}
+.dot{width:6px;height:6px;border:0;padding:0;border-radius:50%;background:#3e3e42;appearance:none;-webkit-appearance:none;cursor:pointer}
+.dot.active{background:#858585}
+@media (max-width:1080px){#main-content{display:flex;flex-direction:column}#graph-panel,#uf-panel,#edges-panel,#output-panel{width:100%}#graph-panel,#uf-panel{height:auto;overflow:visible}#tree-scroll{height:360px;flex:none}}
+@media (max-width:760px){.metric-row{grid-template-columns:1fr}.edge-card{width:78px;min-width:78px}}
+@media (max-width:560px){body{padding:12px}#step-desc{min-height:82px}.nbtn{padding:7px 8px;flex:1 1 0;min-width:0}#dots{display:none!important}#nav{flex-direction:row!important;align-items:center!important;gap:8px!important}.group-cell{width:48px;min-width:48px}}
+</style>
+</head>
+<body>
+<h1>Kruskal MST / 크루스칼 최소 신장 트리</h1>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="step-code">
+  <div class="step-code-label">현재 실행 코드 / Current code</div>
+  <div id="step-code-lines"></div>
+</div>
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:rgba(135,135,135,.55)"></div>전체 그래프 T / Total graph</div>
+  <div class="leg"><div class="leg-c" style="background:#4ec9b0"></div>신장 트리 F / Spanning tree</div>
+  <div class="leg"><div class="leg-c" style="background:#f7b267"></div>비교 간선 / Compare edge</div>
+  <div class="leg"><div class="leg-c" style="background:#f44747"></div>사이클 제외 / Cycle skipped</div>
+</div>
+<div id="mode-tabs">
+  <button class="tab-btn active" id="tab-qf" onclick="setMode('quickFind')">Quick-Find 배열</button>
+  <button class="tab-btn" id="tab-qu" onclick="setMode('quickUnion')">Quick-Union 트리</button>
+</div>
+<div id="main-content">
+  <div class="sbox" id="graph-panel">
+    <div class="slabel">Undirected Weighted Graph</div>
+    <svg id="graph-svg" viewBox="0 0 780 470" aria-label="Kruskal minimum spanning tree graph">
+      <g id="edge-group"></g>
+      <g id="label-group"></g>
+      <g id="node-group"></g>
+    </svg>
+    <div class="graph-note">Kruskal은 weight 오름차순으로 간선을 하나씩 검사하고, UnionFind에서 양 끝 정점이 이미 연결되어 있으면 사이클이므로 건너뜁니다.</div>
+  </div>
+  <div class="sbox" id="uf-panel">
+    <div class="slabel" id="uf-title">UnionFind State</div>
+    <div class="metric-row">
+      <div class="metric-card"><div class="metric-name">Current Edge</div><div class="metric-value" id="current-edge">-</div></div>
+      <div class="metric-card"><div class="metric-name">MST Weight</div><div class="metric-value" id="mst-weight">0</div></div>
+      <div class="metric-card"><div class="metric-name">Num Groups</div><div class="metric-value" id="num-groups">9</div></div>
+    </div>
+    <div id="qf-view" class="active">
+      <div class="slabel">Quick-Find group 배열</div>
+      <div id="qf-grid" class="group-grid"></div>
+      <div class="uf-note">`Find(p)`는 `group[p]`를 바로 반환합니다. `Union(p, q)`는 pid와 같은 값을 가진 모든 칸을 qid로 바꿉니다.</div>
+    </div>
+    <div id="qu-view">
+      <div class="slabel">Quick-Union 개념 트리</div>
+      <div id="tree-scroll">
+        <svg id="tree-svg" viewBox="0 0 780 360" aria-label="Quick Union parent forest">
+          <g id="tree-edge-group"></g>
+          <g id="tree-node-group"></g>
+        </svg>
+      </div>
+      <div class="uf-note">`Find(p)`는 부모 포인터를 루트까지 따라 올라갑니다. `Union(p, q)`는 p의 루트를 q의 루트 아래에 연결합니다.</div>
+    </div>
+  </div>
+  <div class="sbox" id="edges-panel">
+    <div class="slabel">Sorted Edges by Weight</div>
+    <div id="edges-list" class="edges-list"></div>
+    <div class="edges-note">주황색은 현재 비교 중인 간선, 초록색은 MST에 추가된 간선, 빨간색은 사이클 때문에 제외된 간선입니다.</div>
+  </div>
+  <div class="sbox" id="output-panel">
+    <div class="slabel">출력 결과 / cout output</div>
+    <div id="output-lines"></div>
+  </div>
+</div>
+<div id="code-panel">
+  <div class="code-title">UnionFind / Kruskal MST</div>
+  <div id="code-body"></div>
+</div>
+<div id="nav">
+  <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
+  <button class="nbtn" id="reset" onclick="goTo(0)">처음</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="next" onclick="go(1)">다음 →</button>
+</div>
+<script>
+const GRAPH = {
+  nodes: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+  pos: {
+    0: { x: 92, y: 165 },
+    1: { x: 245, y: 82 },
+    2: { x: 445, y: 92 },
+    3: { x: 642, y: 165 },
+    4: { x: 615, y: 330 },
+    5: { x: 410, y: 360 },
+    6: { x: 218, y: 360 },
+    7: { x: 88, y: 306 },
+    8: { x: 314, y: 224 }
+  }
+};
+
+const RAW_EDGES = [
+  { u: 0, v: 1, weight: 4.0, order: 0 },
+  { u: 0, v: 7, weight: 9.0, order: 1 },
+  { u: 1, v: 2, weight: 8.0, order: 2 },
+  { u: 1, v: 7, weight: 11.0, order: 3 },
+  { u: 2, v: 3, weight: 7.0, order: 4 },
+  { u: 2, v: 5, weight: 4.0, order: 5 },
+  { u: 2, v: 8, weight: 2.0, order: 6 },
+  { u: 3, v: 4, weight: 9.0, order: 7 },
+  { u: 3, v: 5, weight: 14.0, order: 8 },
+  { u: 4, v: 5, weight: 10.0, order: 9 },
+  { u: 5, v: 6, weight: 2.0, order: 10 },
+  { u: 6, v: 7, weight: 1.0, order: 11 },
+  { u: 6, v: 8, weight: 6.0, order: 12 },
+  { u: 7, v: 8, weight: 7.0, order: 13 }
+];
+
+const EDGES = RAW_EDGES.slice().sort((a, b) => a.weight - b.weight || a.order - b.order);
+const LABEL_OFFSETS = {
+  '0-1': { x: 0, y: -8 }, '0-7': { x: -8, y: 0 }, '1-2': { x: 0, y: -12 },
+  '1-7': { x: -12, y: -5 }, '2-3': { x: 4, y: -10 }, '2-5': { x: 16, y: 0 },
+  '2-8': { x: -6, y: -9 }, '3-4': { x: 15, y: 0 }, '3-5': { x: 5, y: 12 },
+  '4-5': { x: 0, y: 16 }, '5-6': { x: 0, y: 18 }, '6-7': { x: -16, y: 4 },
+  '6-8': { x: -4, y: 12 }, '7-8': { x: -6, y: 2 }
+};
+
+const CODE = [
+  'class UnionFind',
+  '{',
+  '    vector<int> group;',
+  '    int num_groups;',
+  '',
+  '    int Find(int p) { return group[p]; }',
+  '',
+  '    void Union(int p, int q)',
+  '    {',
+  '        int pid = Find(p);',
+  '        int qid = Find(q);',
+  '        if (pid == qid) return;',
+  '        for (int i = 0; i < group.size(); i++)',
+  '            if (group[i] == pid) group[i] = qid;',
+  '        num_groups--;',
+  '    }',
+  '',
+  '    int FindQuickUnion(int p)',
+  '    {',
+  '        while (p != group[p]) p = group[p];',
+  '        return p;',
+  '    }',
+  '',
+  '    void UnionQuickUnion(int p, int q)',
+  '    {',
+  '        int i = FindQuickUnion(p);',
+  '        int j = FindQuickUnion(q);',
+  '        if (i == j) return;',
+  '        group[i] = j;',
+  '        num_groups--;',
+  '    }',
+  '};',
+  '',
+  'sort(edges.begin(), edges.end());',
+  'PrintEdges(edges);',
+  'double mst_wt = 0.0;',
+  'UnionFind uf(9);',
+  '',
+  'for (auto& e : edges)',
+  '{',
+  '    if (uf.Find(e.u) == uf.Find(e.v))',
+  '        continue;',
+  '    else',
+  '        uf.Union(e.u, e.v);',
+  '',
+  '    mst_wt += e.weight;',
+  '    cout << e.u << " - " << e.v << " : " << e.weight << endl;',
+  '}',
+  '',
+  'cout << mst_wt << endl;'
+];
+
+const STEP_STATE = [];
+const counter = document.getElementById('step-counter');
+const desc = document.getElementById('step-desc');
+const stepCodeLines = document.getElementById('step-code-lines');
+const edgeGroup = document.getElementById('edge-group');
+const labelGroup = document.getElementById('label-group');
+const nodeGroup = document.getElementById('node-group');
+const treeEdgeGroup = document.getElementById('tree-edge-group');
+const treeNodeGroup = document.getElementById('tree-node-group');
+const qfGrid = document.getElementById('qf-grid');
+const qfView = document.getElementById('qf-view');
+const quView = document.getElementById('qu-view');
+const ufTitle = document.getElementById('uf-title');
+const currentEdgeBox = document.getElementById('current-edge');
+const mstWeightBox = document.getElementById('mst-weight');
+const numGroupsBox = document.getElementById('num-groups');
+const edgesList = document.getElementById('edges-list');
+const outputLines = document.getElementById('output-lines');
+const codeBody = document.getElementById('code-body');
+const dots = document.getElementById('dots');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+
+let current = 0;
+let mode = 'quickFind';
+
+function edgeKey(a, b) {
+  const lo = Math.min(a, b);
+  const hi = Math.max(a, b);
+  return `${lo}-${hi}`;
+}
+
+function fmtWeight(value) {
+  return String(Number(value.toFixed(10)));
+}
+
+function esc(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function syntaxHighlight(line) {
+  return esc(line)
+    .replace(/\b(class|int|double|void|for|if|else|return|while|continue)\b/g, '<span class="kw">$1</span>')
+    .replace(/\b(UnionFind|Find|Union|FindQuickUnion|UnionQuickUnion|sort|PrintEdges)\b/g, '<span class="fn">$1</span>')
+    .replace(/\b(vector|Edge)\b/g, '<span class="tp">$1</span>')
+    .replace(/\b(group|num_groups|pid|qid|edges|mst_wt|weight|uf|e|u|v|p|q|i|j)\b/g, '<span class="id">$1</span>')
+    .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
+}
+
+function buildCode() {
+  codeBody.innerHTML = '';
+  CODE.forEach((line, idx) => {
+    const row = document.createElement('div');
+    row.className = 'cline';
+    row.dataset.line = String(idx + 1);
+    const indent = line.match(/^\s*/)[0].length / 4;
+    row.innerHTML = `<div class="lnum">${idx + 1}</div><div class="lcode" style="--indent:${indent}">${line ? syntaxHighlight(line.trimStart()) : '&nbsp;'}</div>`;
+    codeBody.appendChild(row);
+  });
+}
+
+function highlightCode(lines) {
+  document.querySelectorAll('.cline').forEach((row) => row.classList.remove('hl'));
+  lines.forEach((line) => {
+    const row = codeBody.querySelector(`.cline[data-line="${line}"]`);
+    if (row) row.classList.add('hl');
+  });
+}
+
+function renderStepCode(step) {
+  const lines = step.code[mode] || step.code.quickFind || [];
+  stepCodeLines.innerHTML = '';
+  const activeLines = [...new Set(lines)].filter((line) => line >= 1 && line <= CODE.length);
+  if (!activeLines.length) {
+    stepCodeLines.innerHTML = '<div class="step-code-row"><div class="step-code-line">-</div><div class="step-code-text">-</div></div>';
+    return;
+  }
+  activeLines.forEach((line) => {
+    const source = CODE[line - 1];
+    const indent = source.match(/^\s*/)[0].length / 4;
+    const row = document.createElement('div');
+    row.className = 'step-code-row';
+    row.innerHTML = `<div class="step-code-line">${line}</div><div class="step-code-text" data-indent="${indent}" style="--indent:${indent}">${syntaxHighlight(source.trimStart())}</div>`;
+    stepCodeLines.appendChild(row);
+  });
+}
+
+function setStepCodeHeight() {
+  const maxRows = Math.max(1, ...STEP_STATE.map((step) => {
+    const qf = new Set((step.code.quickFind || []).filter((line) => line >= 1 && line <= CODE.length)).size;
+    const qu = new Set((step.code.quickUnion || []).filter((line) => line >= 1 && line <= CODE.length)).size;
+    return Math.max(qf, qu);
+  }));
+  stepCodeLines.style.setProperty('--step-code-row-count', String(maxRows));
+}
+
+function setOutputHeight() {
+  outputLines.style.setProperty('--output-row-count', String(GRAPH.nodes.length));
+}
+
+function qfFind(group, p) {
+  return group[p];
+}
+
+function quFind(parent, p) {
+  let x = p;
+  while (x !== parent[x]) x = parent[x];
+  return x;
+}
+
+function cloneState(state) {
+  return {
+    qfGroup: state.qfGroup.slice(),
+    quParent: state.quParent.slice(),
+    qfChanged: state.qfChanged.slice(),
+    quChanged: state.quChanged.slice(),
+    mstEdges: state.mstEdges.map((edge) => ({ ...edge })),
+    rejectedEdges: state.rejectedEdges.map((edge) => ({ ...edge })),
+    outputLines: state.outputLines.slice(),
+    outputHighlightIndex: state.outputHighlightIndex,
+    currentEdge: state.currentEdge ? { ...state.currentEdge } : null,
+    currentIndex: state.currentIndex,
+    qfPid: state.qfPid,
+    qfQid: state.qfQid,
+    quRootU: state.quRootU,
+    quRootV: state.quRootV,
+    mstWeight: state.mstWeight,
+    numGroups: state.numGroups,
+    desc: state.desc,
+    code: {
+      quickFind: state.code.quickFind.slice(),
+      quickUnion: state.code.quickUnion.slice()
+    },
+    phase: state.phase
+  };
+}
+
+function pushStep(state, data) {
+  state.currentEdge = data.currentEdge === undefined ? state.currentEdge : data.currentEdge;
+  state.currentIndex = data.currentIndex === undefined ? state.currentIndex : data.currentIndex;
+  state.qfChanged = data.qfChanged || [];
+  state.quChanged = data.quChanged || [];
+  state.qfPid = data.qfPid === undefined ? state.qfPid : data.qfPid;
+  state.qfQid = data.qfQid === undefined ? state.qfQid : data.qfQid;
+  state.quRootU = data.quRootU === undefined ? state.quRootU : data.quRootU;
+  state.quRootV = data.quRootV === undefined ? state.quRootV : data.quRootV;
+  state.outputHighlightIndex = data.outputHighlightIndex === undefined ? null : data.outputHighlightIndex;
+  state.desc = data.desc || '';
+  state.code = data.code || { quickFind: [], quickUnion: [] };
+  state.phase = data.phase || 'init';
+  STEP_STATE.push(cloneState(state));
+}
+
+function buildSteps() {
+  const state = {
+    qfGroup: GRAPH.nodes.slice(),
+    quParent: GRAPH.nodes.slice(),
+    qfChanged: [],
+    quChanged: [],
+    mstEdges: [],
+    rejectedEdges: [],
+    outputLines: [],
+    outputHighlightIndex: null,
+    currentEdge: null,
+    currentIndex: -1,
+    qfPid: null,
+    qfQid: null,
+    quRootU: null,
+    quRootV: null,
+    mstWeight: 0,
+    numGroups: GRAPH.nodes.length,
+    desc: '',
+    code: { quickFind: [], quickUnion: [] },
+    phase: 'init'
+  };
+
+  pushStep(state, {
+    desc: '각 정점이 자기 자신만의 그룹으로 시작한다. Kruskal은 먼저 간선을 weight 오름차순으로 정렬한다.',
+    code: { quickFind: [1, 3, 4, 34, 35, 36, 37], quickUnion: [1, 3, 4, 34, 35, 36, 37] },
+    phase: 'init'
+  });
+
+  EDGES.forEach((edge, index) => {
+    const qfPid = qfFind(state.qfGroup, edge.u);
+    const qfQid = qfFind(state.qfGroup, edge.v);
+    const quRootU = quFind(state.quParent, edge.u);
+    const quRootV = quFind(state.quParent, edge.v);
+    const connected = qfPid === qfQid;
+
+    pushStep(state, {
+      currentEdge: edge,
+      currentIndex: index,
+      qfPid,
+      qfQid,
+      quRootU,
+      quRootV,
+      desc: `간선 ${edge.u}-${edge.v}(weight ${fmtWeight(edge.weight)})를 검사한다. 두 끝 정점이 이미 같은 그룹이면 사이클이 된다.`,
+      code: { quickFind: [39, 41, 42], quickUnion: [18, 20, 21, 24, 26, 27, 39, 41, 42] },
+      phase: 'compare'
+    });
+
+    if (connected) {
+      state.rejectedEdges.push(edge);
+      pushStep(state, {
+        currentEdge: edge,
+        currentIndex: index,
+        qfPid,
+        qfQid,
+        quRootU,
+        quRootV,
+        desc: `Find(${edge.u})와 Find(${edge.v})가 같은 그룹을 가리키므로 ${edge.u}-${edge.v}는 사이클을 만들고 제외된다.`,
+        code: { quickFind: [41, 42], quickUnion: [20, 21, 27, 28, 41, 42] },
+        phase: 'skip'
+      });
+      return;
+    }
+
+    const qfChanged = [];
+    state.qfGroup.forEach((value, i) => {
+      if (value === qfPid) {
+        state.qfGroup[i] = qfQid;
+        qfChanged.push(i);
+      }
+    });
+
+    state.quParent[quRootU] = quRootV;
+    state.numGroups--;
+    state.mstWeight += edge.weight;
+    state.mstEdges.push(edge);
+    state.outputLines.push(`${edge.u} - ${edge.v} : ${fmtWeight(edge.weight)}`);
+
+    pushStep(state, {
+      currentEdge: edge,
+      currentIndex: index,
+      qfPid,
+      qfQid,
+      quRootU,
+      quRootV,
+      qfChanged,
+      quChanged: [quRootU],
+      desc: `${edge.u}-${edge.v}는 서로 다른 그룹을 연결하므로 MST에 추가하고 Union을 수행한다.`,
+      code: { quickFind: [8, 10, 11, 12, 13, 14, 15, 44, 46, 47], quickUnion: [24, 26, 27, 28, 29, 30, 44, 46, 47] },
+      phase: 'union',
+      outputHighlightIndex: state.outputLines.length - 1
+    });
+  });
+
+  state.outputLines.push(fmtWeight(state.mstWeight));
+  pushStep(state, {
+    currentEdge: null,
+    currentIndex: EDGES.length,
+    desc: `선택된 간선은 ${state.mstEdges.length}개이고 MST 총 weight는 ${fmtWeight(state.mstWeight)}이다. 마지막으로 mst_wt를 출력한다.`,
+    code: { quickFind: [50], quickUnion: [50] },
+    phase: 'output',
+    outputHighlightIndex: state.outputLines.length - 1
+  });
+}
+
+function edgeInList(list, edge) {
+  return list.some((item) => edgeKey(item.u, item.v) === edgeKey(edge.u, edge.v));
+}
+
+function edgeStatus(step, edge) {
+  const active = step.currentEdge && edgeKey(step.currentEdge.u, step.currentEdge.v) === edgeKey(edge.u, edge.v);
+  if (active && step.phase === 'skip') return 'reject';
+  if (active && step.phase === 'compare') return 'current';
+  if (edgeInList(step.mstEdges, edge)) return 'accept';
+  if (edgeInList(step.rejectedEdges, edge)) return 'reject';
+  if (active && step.phase === 'union') return 'accept';
+  return 'idle';
+}
+
+function edgeStyle(status) {
+  if (status === 'current') return { stroke: '#f7b267', width: 4.4, label: '#ffe4b8' };
+  if (status === 'accept') return { stroke: '#4ec9b0', width: 4.2, label: '#cffff2' };
+  if (status === 'reject') return { stroke: '#f44747', width: 3.6, label: '#ffd4d4' };
+  return { stroke: 'rgba(135,135,135,.45)', width: 2, label: '#dcdcaa' };
+}
+
+function lineGeom(p0, p1) {
+  const dx = p1.x - p0.x;
+  const dy = p1.y - p0.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  return {
+    sx: p0.x + ux * 26,
+    sy: p0.y + uy * 26,
+    ex: p1.x - ux * 26,
+    ey: p1.y - uy * 26,
+    mx: (p0.x + p1.x) / 2,
+    my: (p0.y + p1.y) / 2
+  };
+}
+
+function drawGraph(step) {
+  const SVG = 'http://www.w3.org/2000/svg';
+  edgeGroup.innerHTML = '';
+  labelGroup.innerHTML = '';
+  nodeGroup.innerHTML = '';
+
+  RAW_EDGES.forEach((edge) => {
+    const p0 = GRAPH.pos[edge.u];
+    const p1 = GRAPH.pos[edge.v];
+    const geom = lineGeom(p0, p1);
+    const status = edgeStatus(step, edge);
+    const style = edgeStyle(status);
+
+    const line = document.createElementNS(SVG, 'line');
+    line.setAttribute('x1', geom.sx);
+    line.setAttribute('y1', geom.sy);
+    line.setAttribute('x2', geom.ex);
+    line.setAttribute('y2', geom.ey);
+    line.setAttribute('stroke', style.stroke);
+    line.setAttribute('stroke-width', style.width);
+    line.setAttribute('stroke-linecap', 'round');
+    edgeGroup.appendChild(line);
+
+    const off = LABEL_OFFSETS[edgeKey(edge.u, edge.v)] || { x: 0, y: 0 };
+    const text = document.createElementNS(SVG, 'text');
+    text.setAttribute('x', geom.mx + off.x);
+    text.setAttribute('y', geom.my + off.y);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('font-size', '12');
+    text.setAttribute('font-weight', '700');
+    text.setAttribute('font-family', 'Consolas, monospace');
+    text.setAttribute('fill', style.label);
+    text.setAttribute('stroke', '#252526');
+    text.setAttribute('stroke-width', '3');
+    text.setAttribute('paint-order', 'stroke');
+    text.textContent = fmtWeight(edge.weight);
+    labelGroup.appendChild(text);
+  });
+
+  GRAPH.nodes.forEach((id) => {
+    const p = GRAPH.pos[id];
+    const isActive = step.currentEdge && (step.currentEdge.u === id || step.currentEdge.v === id);
+    const circle = document.createElementNS(SVG, 'circle');
+    circle.setAttribute('cx', p.x);
+    circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', 28);
+    circle.setAttribute('fill', isActive ? 'rgba(247,178,103,.14)' : 'rgba(80,80,80,.28)');
+    circle.setAttribute('stroke', isActive ? '#f7b267' : '#555');
+    circle.setAttribute('stroke-width', isActive ? 3.4 : 2.4);
+    nodeGroup.appendChild(circle);
+
+    const label = document.createElementNS(SVG, 'text');
+    label.setAttribute('x', p.x);
+    label.setAttribute('y', p.y + 9);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('font-size', '27');
+    label.setAttribute('font-family', 'Consolas, monospace');
+    label.setAttribute('fill', isActive ? '#ffe4b8' : '#cfcfcf');
+    label.textContent = String(id);
+    nodeGroup.appendChild(label);
+  });
+}
+
+function colorForGroup(value) {
+  const colors = ['#569cd6', '#4ec9b0', '#c586c0', '#dcdcaa', '#f7b267', '#9cdcfe', '#ce9178', '#b5cea8', '#d16969'];
+  return colors[Math.abs(value) % colors.length];
+}
+
+function renderQuickFind(step) {
+  qfGrid.innerHTML = '';
+  step.qfGroup.forEach((value, id) => {
+    const cell = document.createElement('div');
+    cell.className = `group-cell ${step.qfChanged.includes(id) ? 'changed' : ''}`.trim();
+    cell.innerHTML = `<div class="group-label">${id}</div><div class="group-value">${value}</div>`;
+    qfGrid.appendChild(cell);
+  });
+}
+
+function renderQuickUnion(step) {
+  const SVG = 'http://www.w3.org/2000/svg';
+  treeEdgeGroup.innerHTML = '';
+  treeNodeGroup.innerHTML = '';
+  const parent = step.quParent;
+  const roots = GRAPH.nodes.filter((id) => parent[id] === id);
+  const children = {};
+  GRAPH.nodes.forEach((id) => { children[id] = []; });
+  GRAPH.nodes.forEach((id) => {
+    if (parent[id] !== id) children[parent[id]].push(id);
+  });
+
+  const positions = {};
+  const slot = 720 / Math.max(roots.length, 1);
+  roots.forEach((root, index) => {
+    const rootX = 30 + slot * index + slot / 2;
+    const queue = [{ id: root, depth: 0, order: 0, siblings: 1, baseX: rootX, spread: Math.max(52, slot * .72) }];
+    while (queue.length) {
+      const item = queue.shift();
+      positions[item.id] = { x: item.baseX, y: 34 + item.depth * 56 };
+      const kids = children[item.id];
+      kids.forEach((child, childIndex) => {
+        const spread = Math.max(42, item.spread * .55);
+        const offset = kids.length === 1 ? 0 : (childIndex - (kids.length - 1) / 2) * spread;
+        queue.push({ id: child, depth: item.depth + 1, order: childIndex, siblings: kids.length, baseX: item.baseX + offset, spread });
+      });
+    }
+  });
+
+  GRAPH.nodes.forEach((id) => {
+    if (parent[id] === id) return;
+    const p0 = positions[id];
+    const p1 = positions[parent[id]];
+    if (!p0 || !p1) return;
+    const line = document.createElementNS(SVG, 'line');
+    line.setAttribute('x1', p0.x);
+    line.setAttribute('y1', p0.y - 16);
+    line.setAttribute('x2', p1.x);
+    line.setAttribute('y2', p1.y + 16);
+    line.setAttribute('stroke', '#6a6a6a');
+    line.setAttribute('stroke-width', '2');
+    treeEdgeGroup.appendChild(line);
+  });
+
+  GRAPH.nodes.forEach((id) => {
+    const p = positions[id];
+    const root = quFind(parent, id);
+    const color = colorForGroup(root);
+    const changed = step.quChanged.includes(id);
+    const active = step.currentEdge && (step.currentEdge.u === id || step.currentEdge.v === id);
+    const circle = document.createElementNS(SVG, 'circle');
+    circle.setAttribute('cx', p.x);
+    circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', 16);
+    circle.setAttribute('fill', active ? 'rgba(247,178,103,.14)' : 'rgba(31,31,31,.9)');
+    circle.setAttribute('stroke', changed ? '#dcdcaa' : color);
+    circle.setAttribute('stroke-width', changed || active ? 3 : 2);
+    treeNodeGroup.appendChild(circle);
+
+    const text = document.createElementNS(SVG, 'text');
+    text.setAttribute('x', p.x);
+    text.setAttribute('y', p.y + 5);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('font-size', '14');
+    text.setAttribute('font-family', 'Consolas, monospace');
+    text.setAttribute('font-weight', '700');
+    text.setAttribute('fill', active ? '#ffe4b8' : '#d4d4d4');
+    text.textContent = String(id);
+    treeNodeGroup.appendChild(text);
+  });
+}
+
+function renderEdges(step) {
+  edgesList.innerHTML = '';
+  EDGES.forEach((edge, index) => {
+    const status = edgeStatus(step, edge);
+    const card = document.createElement('div');
+    card.className = `edge-card ${status}`.trim();
+    card.innerHTML = `<div class="edge-main">${index + 1}. ${edge.u}-${edge.v}</div><div class="edge-weight">w:${fmtWeight(edge.weight)}</div>`;
+    edgesList.appendChild(card);
+  });
+}
+
+function renderOutput(step) {
+  outputLines.innerHTML = '';
+  if (!step.outputLines.length) {
+    outputLines.innerHTML = '<div class="output-empty">empty</div>';
+    return;
+  }
+  step.outputLines.forEach((line, index) => {
+    const row = document.createElement('div');
+    row.className = `output-row ${index === step.outputHighlightIndex ? 'new' : ''}`.trim();
+    row.innerHTML = `<div class="output-line-no">${index + 1}</div><div class="output-text">${esc(line)}</div>`;
+    outputLines.appendChild(row);
+  });
+}
+
+function render(step) {
+  counter.textContent = `Step ${current + 1} / ${STEP_STATE.length}`;
+  desc.textContent = step.desc;
+  renderStepCode(step);
+  currentEdgeBox.textContent = step.currentEdge ? `${step.currentEdge.u}-${step.currentEdge.v} (${fmtWeight(step.currentEdge.weight)})` : '-';
+  mstWeightBox.textContent = fmtWeight(step.mstWeight);
+  numGroupsBox.textContent = String(step.numGroups);
+  ufTitle.textContent = mode === 'quickFind' ? 'UnionFind State / Quick-Find' : 'UnionFind State / Quick-Union';
+  qfView.classList.toggle('active', mode === 'quickFind');
+  quView.classList.toggle('active', mode === 'quickUnion');
+  document.getElementById('tab-qf').classList.toggle('active', mode === 'quickFind');
+  document.getElementById('tab-qu').classList.toggle('active', mode === 'quickUnion');
+  renderQuickFind(step);
+  renderQuickUnion(step);
+  renderEdges(step);
+  renderOutput(step);
+  drawGraph(step);
+  highlightCode(step.code[mode] || []);
+  document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === current));
+  prevBtn.disabled = current === 0;
+  nextBtn.disabled = current === STEP_STATE.length - 1;
+}
+
+function buildDots() {
+  dots.innerHTML = '';
+  STEP_STATE.forEach((_, index) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'dot';
+    dot.addEventListener('click', () => goTo(index));
+    dots.appendChild(dot);
+  });
+}
+
+function setMode(nextMode) {
+  mode = nextMode;
+  render(STEP_STATE[current]);
+}
+
+function go(delta) {
+  const next = current + delta;
+  if (next < 0 || next >= STEP_STATE.length) return;
+  current = next;
+  render(STEP_STATE[current]);
+}
+
+function goTo(index) {
+  current = Math.max(0, Math.min(STEP_STATE.length - 1, index));
+  render(STEP_STATE[current]);
+}
+
+document.addEventListener('keydown', (event) => {
+  const target = event.target;
+  const tag = (target && target.tagName ? target.tagName : '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || (target && target.isContentEditable)) return;
+  if (event.key === 'ArrowLeft') { event.preventDefault(); go(-1); }
+  if (event.key === 'ArrowRight') { event.preventDefault(); go(1); }
+  if (event.key === 'Home') { event.preventDefault(); goTo(0); }
+  if (event.key === 'End') { event.preventDefault(); goTo(STEP_STATE.length - 1); }
+});
+
+buildCode();
+buildSteps();
+setStepCodeHeight();
+setOutputHeight();
+buildDots();
+render(STEP_STATE[current]);
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>
