@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ford-Fulkerson / 최대 유량</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacing:.5px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:62px;line-height:1.6;padding:8px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#step-code{margin-top:6px;background:#1e1e1e;border:1px solid #3e3e42;border-left:3px solid #dcdcaa;border-radius:0 4px 4px 0;overflow:hidden}
+.step-code-label{padding:4px 10px;border-bottom:1px solid #3e3e42;color:#858585;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+#step-code-lines{padding:4px 0;height:calc(var(--step-code-row-count,1) * 21px + 8px);overflow:auto}
+.step-code-row{display:flex;height:21px}
+.step-code-line{width:40px;text-align:right;padding:3px 10px 3px 0;color:#666;font-size:11px;flex-shrink:0}
+.step-code-text{position:relative;flex:1;padding:3px 10px 3px calc(var(--indent,0) * 18px + 10px);color:#d4d4d4;font-size:12px;line-height:1.45;white-space:pre;overflow-x:auto}
+.step-code-text::before{content:'';position:absolute;left:10px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.1) 13px 14px,transparent 14px 18px);pointer-events:none}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:18px;height:4px;border-radius:999px}
+#example-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.example-tab{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;border-radius:4px;padding:6px 14px;font-family:inherit;font-size:12px;cursor:pointer}
+.example-tab.active{border-color:#569cd6!important;background:rgba(86,156,214,.16)!important;color:#d9ecff!important}
+#main-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"graph state" "adj residual" "output output";align-items:stretch;gap:14px;margin:12px 0}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:10px 12px;min-width:0}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#graph-panel{grid-area:graph;display:flex;flex-direction:column;height:448px;overflow:hidden}
+#state-panel{grid-area:state;display:flex;flex-direction:column;height:448px;overflow:hidden}
+#adj-panel{grid-area:adj}
+#residual-panel{grid-area:residual}
+#output-panel{grid-area:output}
+#graph-svg{width:100%;height:100%;display:block;flex:1 1 auto;min-height:0}
+.graph-note,.state-note,.adj-note,.residual-note{font-size:11px;color:#858585;margin-top:8px;line-height:1.55}
+.metric-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.metric-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:58px}
+.metric-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.metric-value{font-size:17px;font-weight:700;color:#dcdcaa;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.state-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-height:0}
+.state-box{background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:8px;min-width:0}
+.chip-row{display:flex;gap:5px;flex-wrap:wrap;min-height:28px;align-items:center}
+.chip{border:1px solid #3e3e42;background:#252526;border-radius:4px;padding:4px 8px;font-size:12px;color:#d4d4d4;white-space:nowrap}
+.chip.ff-queue{border-color:#569cd6;color:#d9ecff;background:rgba(86,156,214,.12)}
+.chip.ff-path{border-color:#4ec9b0;color:#b8f5e6;background:rgba(78,201,176,.11)}
+.chip.ff-current{border-color:#f7b267;color:#ffd7aa;background:rgba(247,178,103,.12)}
+.chip.ff-empty{color:#555;border-color:#343434;background:#1f1f1f}
+.array-row{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px}
+.array-cell{width:54px;min-width:54px;min-height:48px;border:1px solid #3e3e42;border-radius:6px;background:#1f1f1f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.array-cell.ff-marked{border-color:#4ec9b0;background:rgba(78,201,176,.09)}
+.array-cell.ff-current{border-color:#f7b267;background:rgba(247,178,103,.11)}
+.array-label{font-size:10px;color:#666}
+.array-value{font-size:12px;font-weight:700;color:#d4d4d4}
+.table-scroll{overflow:auto;max-height:260px;border:1px solid #343434;border-radius:6px;background:#1e1e1e}
+.adj-row,.residual-row{display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px;align-items:start;padding:7px 8px;border-bottom:1px solid #2d2d2d}
+.adj-row:last-child,.residual-row:last-child{border-bottom:0}
+.vertex-badge{width:32px;height:32px;border:1px solid #3e3e42;border-radius:6px;background:#2d2d2d;color:#d4d4d4;display:flex;align-items:center;justify-content:center;font-weight:700}
+.edge-list{display:flex;gap:6px;flex-wrap:wrap}
+.edge-card{min-width:96px;border:1px solid #3e3e42;border-radius:6px;background:#1f1f1f;padding:5px 7px}
+.edge-card.ff-current{border-color:#f7b267;background:rgba(247,178,103,.12)}
+.edge-card.ff-path{border-color:#4ec9b0;background:rgba(78,201,176,.11)}
+.edge-card.ff-flow{border-color:#569cd6;background:rgba(86,156,214,.1)}
+.edge-card.ff-saturated{border-color:#f44747;background:rgba(244,71,71,.09)}
+.edge-main{font-size:12px;font-weight:700;color:#d4d4d4;line-height:1.25;white-space:nowrap}
+.edge-sub{font-size:10px;color:#858585;line-height:1.35;margin-top:2px}
+.residual-card{min-width:120px;border:1px solid #3e3e42;border-radius:6px;background:#1f1f1f;padding:5px 7px}
+.residual-card.ff-current{border-color:#f7b267;background:rgba(247,178,103,.12)}
+.residual-card.ff-path{border-color:#4ec9b0;background:rgba(78,201,176,.11)}
+.residual-line{font-size:11px;color:#d4d4d4;line-height:1.45;white-space:nowrap}
+#output-lines{height:calc(var(--output-row-count,7) * 22px + 12px);overflow:auto;background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:6px 0}
+.output-row{display:flex;min-height:22px;line-height:22px}
+.output-row.ff-new{background:rgba(220,220,170,.08);border-left:2px solid #dcdcaa}
+.output-line-no{width:38px;text-align:right;padding-right:10px;color:#555;font-size:11px;flex-shrink:0}
+.output-text{flex:1;color:#d4d4d4;font-size:12px;white-space:pre}
+.output-empty{color:#555;font-size:12px;padding:3px 10px}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
+.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0;max-height:620px;overflow:auto}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.ff-hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.lnum{width:42px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;min-width:760px}
+.lcode::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}.str{color:#ce9178}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:760px;justify-content:center}
+.dot{width:6px;height:6px;border:0;padding:0;border-radius:50%;background:#3e3e42;appearance:none;-webkit-appearance:none;cursor:pointer}
+.dot.ff-dot-on{background:#858585}
+@media (max-width:1120px){#main-content{display:flex;flex-direction:column}#graph-panel,#state-panel{height:auto;min-height:420px}.metric-row{grid-template-columns:repeat(2,minmax(0,1fr))}.state-grid{grid-template-columns:1fr}}
+@media (max-width:640px){body{padding:12px}#step-desc{min-height:86px}.metric-row{grid-template-columns:1fr}.array-cell{width:48px;min-width:48px}.nbtn{padding:7px 8px;flex:1 1 0;min-width:0}#dots{display:none!important}#nav{gap:8px!important}.edge-card,.residual-card{min-width:92px}}
+</style>
+</head>
+<body>
+<h1>Ford-Fulkerson / 최대 유량</h1>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="step-code">
+  <div class="step-code-label">현재 실행 코드 / Current code</div>
+  <div id="step-code-lines"></div>
+</div>
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:#6a6a6a"></div>용량 간선 / Capacity edge</div>
+  <div class="leg"><div class="leg-c" style="background:#f7b267"></div>BFS 검사 / Scanning</div>
+  <div class="leg"><div class="leg-c" style="background:#4ec9b0"></div>증가 경로 / Augmenting path</div>
+  <div class="leg"><div class="leg-c" style="background:#569cd6"></div>현재 유량 / Flow</div>
+  <div class="leg"><div class="leg-c" style="background:#f44747"></div>포화 / Saturated</div>
+</div>
+<div id="example-tabs">
+  <button class="example-tab active" id="tab-lecture" onclick="setExample('lecture')">강의 예제</button>
+  <button class="example-tab" id="tab-clrs" onclick="setExample('clrs')">CLRS 예제</button>
+</div>
+<div id="main-content">
+  <div class="sbox" id="graph-panel">
+    <div class="slabel">Flow Network</div>
+    <svg id="graph-svg" viewBox="0 0 760 420" aria-label="Ford-Fulkerson flow network">
+      <g id="edge-group"></g>
+      <g id="label-group"></g>
+      <g id="node-group"></g>
+    </svg>
+    <div class="graph-note">간선 라벨은 <b>flow / capacity</b>입니다. BFS는 잔여 용량이 0보다 큰 방향만 따라가며, 찾은 증가 경로의 병목 용량만큼 유량을 보냅니다.</div>
+  </div>
+  <div class="sbox" id="state-panel">
+    <div class="slabel">Ford-Fulkerson State</div>
+    <div class="metric-row">
+      <div class="metric-card"><div class="metric-name">Source</div><div class="metric-value" id="source-value">s = 0</div></div>
+      <div class="metric-card"><div class="metric-name">Sink</div><div class="metric-value" id="sink-value">t = 3</div></div>
+      <div class="metric-card"><div class="metric-name">Value</div><div class="metric-value" id="flow-value">0</div></div>
+      <div class="metric-card"><div class="metric-name">Bottleneck</div><div class="metric-value" id="bottle-value">-</div></div>
+    </div>
+    <div class="state-grid">
+      <div class="state-box">
+        <div class="slabel">BFS Queue</div>
+        <div class="chip-row" id="queue-row"></div>
+      </div>
+      <div class="state-box">
+        <div class="slabel">Current</div>
+        <div class="chip-row" id="current-row"></div>
+      </div>
+      <div class="state-box">
+        <div class="slabel">marked 배열</div>
+        <div class="array-row" id="marked-row"></div>
+      </div>
+      <div class="state-box">
+        <div class="slabel">prev 배열</div>
+        <div class="array-row" id="prev-row"></div>
+      </div>
+    </div>
+    <div class="state-box" style="margin-top:8px">
+      <div class="slabel">Augmenting Path</div>
+      <div class="chip-row" id="path-row"></div>
+    </div>
+    <div class="state-note">`prev[w]`는 BFS가 w를 처음 발견하게 만든 `FlowEdge*`입니다. 경로 복원은 `t`에서 `s`까지 `prev[v]->Other(v)`로 거꾸로 따라갑니다.</div>
+  </div>
+  <div class="sbox" id="adj-panel">
+    <div class="slabel">adj: vector&lt;list&lt;FlowEdge*&gt;&gt;</div>
+    <div class="table-scroll" id="adj-table"></div>
+    <div class="adj-note">`AddEdge()`는 하나의 `FlowEdge*`를 출발 정점과 도착 정점의 인접 리스트에 모두 넣습니다. 그래서 같은 간선을 정방향 잔여 용량과 역방향 잔여 용량 양쪽에서 확인할 수 있습니다.</div>
+  </div>
+  <div class="sbox" id="residual-panel">
+    <div class="slabel">Residual Capacity</div>
+    <div class="table-scroll" id="residual-table"></div>
+    <div class="residual-note">정방향 잔여 용량은 `capacity - flow`, 역방향 잔여 용량은 `flow`입니다. 역방향은 이미 보낸 유량을 취소할 수 있는 양을 의미합니다.</div>
+  </div>
+  <div class="sbox" id="output-panel">
+    <div class="slabel">출력 결과 / cout output</div>
+    <div id="output-lines"></div>
+  </div>
+</div>
+<div id="code-panel">
+  <div class="code-title">Completed Ford-Fulkerson Code</div>
+  <div id="code-body"></div>
+</div>
+<div id="nav">
+  <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
+  <button class="nbtn" id="reset" onclick="goTo(0)">처음</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="next" onclick="go(1)">다음 →</button>
+</div>
+<script>
+let V = 4;
+let SOURCE = 0;
+let SINK = 3;
+let NODES = [
+  { id: 0, x: 90, y: 210, label: '0 / s' },
+  { id: 1, x: 305, y: 95, label: '1' },
+  { id: 2, x: 305, y: 325, label: '2' },
+  { id: 3, x: 620, y: 210, label: '3 / t' }
+];
+let EDGE_DEFS = [
+  { id: 'e01', v: 0, w: 1, capacity: 4, labelOffset: { x: -8, y: -12 } },
+  { id: 'e02', v: 0, w: 2, capacity: 8, labelOffset: { x: -8, y: 14 } },
+  { id: 'e12', v: 1, w: 2, capacity: 6, labelOffset: { x: -22, y: 0 } },
+  { id: 'e13', v: 1, w: 3, capacity: 2, labelOffset: { x: 8, y: -12 } },
+  { id: 'e23', v: 2, w: 3, capacity: 3, labelOffset: { x: 8, y: 14 } }
+];
+let EDGE_BY_ID = Object.fromEntries(EDGE_DEFS.map(e => [e.id, e]));
+let POS = Object.fromEntries(NODES.map(n => [n.id, n]));
+
+let CODE = [
+  '#include <limits>',
+  '#include <limits.h>',
+  '#include <string.h>',
+  '#include <vector>',
+  '#include <iostream>',
+  '#include <queue>',
+  '#include <algorithm>',
+  '#include <assert.h>',
+  '#include <list>',
+  '',
+  'using namespace std;',
+  '',
+  'class FlowEdge',
+  '{',
+  'public:',
+  '    int v = -1;',
+  '    int w = -1;',
+  '    double capacity = 0.0; // 최대 용량',
+  '    double flow = 0.0;     // 현재 유량',
+  '',
+  '    FlowEdge()',
+  '        :v(-1), w(-1), capacity(0.0), flow(0.0)',
+  '    {}',
+  '',
+  '    FlowEdge(int v, int w, double capacity)',
+  '        : v(v), w(w), capacity(capacity), flow(0.0)',
+  '    {}',
+  '',
+  '    FlowEdge(int v, int w, double capacity, double flow)',
+  '        : v(v), w(w), capacity(capacity), flow(flow)',
+  '    {}',
+  '',
+  '    int From() { return v; } //출발지점 리턴',
+  '    int To() { return w; } //도착지점 리턴',
+  '    double Capacity() { return capacity; } //최대용량',
+  '    double Flow() { return flow; } //현재유량',
+  '',
+  '    int Other(int vertex) //간선의 한쪽 정점을 넣으면 반대쪽 정점을 반환',
+  '    {',
+  '        if (vertex == v) return w;',
+  '        else if (vertex == w) return v;',
+  '        else {',
+  '            assert(false);',
+  '            return -1;',
+  '        }',
+  '    }',
+  '',
+  '    double ResidualCapacityTo(int vertex)',
+  '    {',
+  '        if (vertex == v) return flow;',
+  '        else if (vertex == w) return capacity - flow;',
+  '',
+  '        assert(false);',
+  '',
+  '        return 0.0;',
+  '    }',
+  '',
+  '    void AddResidualFlowTo(int vertex, double delta)',
+  '    {',
+  '        if (vertex == v) flow -= delta;',
+  '        else if (vertex == w) flow += delta;',
+  '        else assert(false);',
+  '    }',
+  '',
+  '    void Print()',
+  '    {',
+  '        cout << v << "->" << w << " " << flow << "/" << capacity << endl;',
+  '    }',
+  '',
+  '    int Either() { return v; }',
+  '};',
+  '',
+  'class FlowNetwork',
+  '{',
+  'public:',
+  '    int V; //정점 개수',
+  '    int E; //간선 개수',
+  '    vector<list<FlowEdge*>> adj; //각 정점에 연결된 간선포인터(주소)',
+  '',
+  '    FlowNetwork(int V)',
+  '        : V(V), E(0), adj(V)',
+  '    {}',
+  '',
+  '    void AddEdge(FlowEdge e)',
+  '    {',
+  '        FlowEdge* newEdge = new FlowEdge(e);',
+  '        int v = e.Either();',
+  '        int w = e.Other(v);',
+  '        adj[v].push_back(newEdge); // v의 out_neighbor',
+  '        adj[w].push_back(newEdge); // w의 in_neighbor',
+  '    }',
+  '',
+  '    list<FlowEdge*>& Adj(int v)',
+  '    {',
+  '        return adj[v];',
+  '    }',
+  '',
+  '    vector<FlowEdge*> AllEdges() {',
+  '        vector<FlowEdge*> b;',
+  '        for (int v = 0; v < V; v++)',
+  '            for (auto& e : this->Adj(v))',
+  '                if (e->Other(v) > v)',
+  '                    b.push_back(e);',
+  '        return b;',
+  '    }',
+  '};',
+  '',
+  'class FordFulkerson',
+  '{',
+  'public:',
+  '    vector<bool> marked; //방문기억 배열',
+  '    vector<FlowEdge*> prev; //해당 정점에 도달한 간선 목록',
+  '    double value;',
+  '',
+  '    FordFulkerson(FlowNetwork& g, int s, int t)',
+  '        : marked(g.V), prev(g.V), value(0.0) //marked, prev 배열 g.V개 생성, 즉 정점개수 만큼 생성',
+  '    {',
+  '        while (HasAugmentingPath(g, s, t))',
+  '        {',
+  '            double bottle = numeric_limits<double>::max();//큰 값으로 초기화',
+  '',
+  '            for (int v = t; v != s; v = prev[v]->Other(v))',
+  '                bottle = min(bottle, prev[v]->ResidualCapacityTo(v));',
+  '',
+  '            for (int v = t; v != s; v = prev[v]->Other(v))',
+  '                prev[v]->AddResidualFlowTo(v, bottle);',
+  '',
+  '            value += bottle;',
+  '',
+  '            Print(g);',
+  '        }',
+  '    }',
+  '',
+  '    bool HasAugmentingPath(FlowNetwork& g, int s, int t) //넓이 우선탐색',
+  '    {',
+  '        fill(marked.begin(), marked.end(), false); //방문 초기화',
+  '',
+  '        queue<int> q; // 큐,BFS',
+  '',
+  '        marked[s] = true;',
+  '        q.push(s);',
+  '',
+  '        while (!q.empty())',
+  '        {',
+  '            int v = q.front(); q.pop();',
+  '',
+  '            for (FlowEdge* e : g.Adj(v))',
+  '            {',
+  '                int w = e->Other(v);',
+  '                if (!marked[w] && e->ResidualCapacityTo(w) > 0) // <- TODO: BFS와의 차이 확인',
+  '                {',
+  '                    prev[w] = e;',
+  '                    marked[w] = true;',
+  '                    q.push(w);',
+  '                }',
+  '            }',
+  '        }',
+  '',
+  '        return marked[t];',
+  '    }',
+  '',
+  '    void Print(FlowNetwork& g)',
+  '    {',
+  '        cout << "Result:" << endl;',
+  '        for (int v = 0; v < g.V; v++)',
+  '            for (FlowEdge* e : g.Adj(v))',
+  '                if (v == e->From())',
+  '                    e->Print();',
+  '        cout << value << endl;',
+  '    }',
+  '};',
+  '',
+  'int main()',
+  '{',
+  '    // 강의 영상에 나오는 예시',
+  '    FlowNetwork g(4);',
+  '    for (const auto& e : vector<FlowEdge>{ {0, 1, 4.0}, {0, 2, 8.0}, {1, 2, 6.0}, {1, 3, 2.0}, {2, 3, 3.0} })',
+  '    {',
+  '        g.AddEdge(e);',
+  '    }',
+  '',
+  '    //FlowNetwork g(6); // CLRS 예제',
+  '    //g.AddEdge({ 0, 1, 16.0 });',
+  '    //g.AddEdge({ 0, 2, 13.0 });',
+  '    //g.AddEdge({ 1, 3, 12.0 });',
+  '    //g.AddEdge({ 2, 1, 4.0 });',
+  '    //g.AddEdge({ 2, 4, 14.0 });',
+  '    //g.AddEdge({ 3, 2, 9.0 });',
+  '    //g.AddEdge({ 3, 5, 20.0 });',
+  '    //g.AddEdge({ 4, 3, 7.0 });',
+  '    //g.AddEdge({ 4, 5, 4.0 });',
+  '',
+  '    FordFulkerson f(g, 0, g.V - 1);',
+  '',
+  '    return 0;',
+  '}'
+];
+
+const LECTURE_CODE = CODE.slice();
+const EXAMPLES = {
+  lecture: {
+    title: 'Ford-Fulkerson / 강의 예제',
+    V: 4,
+    source: 0,
+    sink: 3,
+    nodes: [
+      { id: 0, x: 90, y: 210, label: '0 / s' },
+      { id: 1, x: 305, y: 95, label: '1' },
+      { id: 2, x: 305, y: 325, label: '2' },
+      { id: 3, x: 620, y: 210, label: '3 / t' }
+    ],
+    edges: [
+      { id: 'e01', v: 0, w: 1, capacity: 4, labelOffset: { x: -8, y: -12 } },
+      { id: 'e02', v: 0, w: 2, capacity: 8, labelOffset: { x: -8, y: 14 } },
+      { id: 'e12', v: 1, w: 2, capacity: 6, labelOffset: { x: -22, y: 0 } },
+      { id: 'e13', v: 1, w: 3, capacity: 2, labelOffset: { x: 8, y: -12 } },
+      { id: 'e23', v: 2, w: 3, capacity: 3, labelOffset: { x: 8, y: 14 } }
+    ]
+  },
+  clrs: {
+    title: 'Ford-Fulkerson / CLRS 예제',
+    V: 6,
+    source: 0,
+    sink: 5,
+    nodes: [
+      { id: 0, x: 80, y: 210, label: '0 / s' },
+      { id: 1, x: 245, y: 95, label: '1' },
+      { id: 2, x: 245, y: 325, label: '2' },
+      { id: 3, x: 500, y: 95, label: '3' },
+      { id: 4, x: 500, y: 325, label: '4' },
+      { id: 5, x: 675, y: 210, label: '5 / t' }
+    ],
+    edges: [
+      { id: 'e01', v: 0, w: 1, capacity: 16, labelOffset: { x: -8, y: -12 } },
+      { id: 'e02', v: 0, w: 2, capacity: 13, labelOffset: { x: -8, y: 14 } },
+      { id: 'e13', v: 1, w: 3, capacity: 12, labelOffset: { x: 0, y: -16 } },
+      { id: 'e21', v: 2, w: 1, capacity: 4, labelOffset: { x: -25, y: 0 } },
+      { id: 'e24', v: 2, w: 4, capacity: 14, labelOffset: { x: 0, y: 16 } },
+      { id: 'e32', v: 3, w: 2, capacity: 9, labelOffset: { x: 22, y: 0 } },
+      { id: 'e35', v: 3, w: 5, capacity: 20, labelOffset: { x: 8, y: -12 } },
+      { id: 'e43', v: 4, w: 3, capacity: 7, labelOffset: { x: 24, y: 0 } },
+      { id: 'e45', v: 4, w: 5, capacity: 4, labelOffset: { x: 8, y: 14 } }
+    ]
+  }
+};
+const CLRS_MAIN_LINES = [
+  '    // CLRS 예제',
+  '    FlowNetwork g(6);',
+  '    g.AddEdge({ 0, 1, 16.0 });',
+  '    g.AddEdge({ 0, 2, 13.0 });',
+  '    g.AddEdge({ 1, 3, 12.0 });',
+  '    g.AddEdge({ 2, 1, 4.0 });',
+  '    g.AddEdge({ 2, 4, 14.0 });',
+  '    g.AddEdge({ 3, 2, 9.0 });',
+  '    g.AddEdge({ 3, 5, 20.0 });',
+  '    g.AddEdge({ 4, 3, 7.0 });',
+  '    g.AddEdge({ 4, 5, 4.0 });',
+  '',
+  '    FordFulkerson f(g, 0, g.V - 1);',
+  '',
+  '    return 0;'
+];
+
+function codeForExample(exampleKey) {
+  if (exampleKey === 'lecture') return LECTURE_CODE.slice();
+  const start = LECTURE_CODE.findIndex(line => line.includes('// 강의 영상에 나오는 예시'));
+  const end = LECTURE_CODE.findIndex(line => line.includes('FordFulkerson f'));
+  return [
+    ...LECTURE_CODE.slice(0, start),
+    ...CLRS_MAIN_LINES,
+    ...LECTURE_CODE.slice(end + 3)
+  ];
+}
+
+function ln(fragment, startAt = 0) {
+  const idx = CODE.findIndex((line, i) => i >= startAt && line.includes(fragment));
+  return idx >= 0 ? idx + 1 : 1;
+}
+function lnAny(fragments, startAt = 0) {
+  for (const fragment of fragments) {
+    const idx = CODE.findIndex((line, i) => i >= startAt && line.includes(fragment));
+    if (idx >= 0) return idx + 1;
+  }
+  return 1;
+}
+let L;
+function computeLineRefs() {
+  return {
+    flowEdgeCtor: ln('FlowEdge(int v'),
+    flowEdgeInit: ln(': v(v), w(w)'),
+    flowNetworkCtor: ln('FlowNetwork(int V)'),
+    flowNetworkInit: ln(': V(V), E(0), adj(V)'),
+    addEdge: ln('void AddEdge'),
+    addEdgeCopy: ln('FlowEdge* newEdge'),
+    addEdgeFrom: ln('int v = e.Either'),
+    addEdgeOther: ln('int w = e.Other'),
+    addEdgePushV: ln('adj[v].push_back'),
+    addEdgePushW: ln('adj[w].push_back'),
+    ffCtor: ln('FordFulkerson(FlowNetwork'),
+    ffInit: ln(': marked(g.V)'),
+    whileAug: ln('while (HasAugmentingPath'),
+    bottleInit: ln('double bottle'),
+    bottleLoop: ln('for (int v = t; v != s; v = prev[v]->Other(v))'),
+    bottleMin: ln('bottle = min'),
+    addLoop: ln('for (int v = t; v != s; v = prev[v]->Other(v))', ln('bottle = min')),
+    addFlow: ln('prev[v]->AddResidualFlowTo'),
+    valueAdd: ln('value += bottle'),
+    print: ln('Print(g)'),
+    hasPath: ln('bool HasAugmentingPath'),
+    fillMarked: ln('fill(marked'),
+    queueDecl: ln('queue<int> q'),
+    markSource: ln('marked[s] = true'),
+    pushSource: ln('q.push(s)'),
+    bfsWhile: ln('while (!q.empty())'),
+    popFront: ln('int v = q.front'),
+    popQueue: ln('q.pop'),
+    scanLoop: ln('for (FlowEdge* e'),
+    otherW: ln('int w = e->Other'),
+    residualIf: ln('ResidualCapacityTo(w) > 0'),
+    setPrev: ln('prev[w] = e'),
+    setMarked: ln('marked[w] = true'),
+    pushW: ln('q.push(w)', ln('prev[w] = e')),
+    returnMarked: ln('return marked[t]'),
+    mainNetwork: lnAny(['FlowNetwork g(4)', 'FlowNetwork g(6)']),
+    mainEdges: lnAny(['for (const auto& e', 'g.AddEdge({']),
+    mainAdd: lnAny(['g.AddEdge(e)', 'g.AddEdge({']),
+    mainFF: ln('FordFulkerson f')
+  };
+}
+
+let steps = [];
+let runtime;
+
+function freshRuntime() {
+  return {
+    built: [],
+    flows: Object.fromEntries(EDGE_DEFS.map(e => [e.id, 0])),
+    marked: Array(V).fill(false),
+    prev: Array(V).fill(null),
+    queue: [],
+    value: 0,
+    bottle: null,
+    currentVertex: null,
+    currentEdge: null,
+    pendingEdge: null,
+    pathEdgeIds: [],
+    pathVertices: [],
+    output: [],
+    newOutputIndex: -1,
+    phase: 'construct'
+  };
+}
+
+function cloneRuntime(extra = {}) {
+  return {
+    built: runtime.built.slice(),
+    flows: { ...runtime.flows },
+    marked: runtime.marked.slice(),
+    prev: runtime.prev.map(p => p ? { ...p } : null),
+    queue: runtime.queue.slice(),
+    value: runtime.value,
+    bottle: runtime.bottle,
+    currentVertex: runtime.currentVertex,
+    currentEdge: runtime.currentEdge,
+    pendingEdge: runtime.pendingEdge,
+    pathEdgeIds: runtime.pathEdgeIds.slice(),
+    pathVertices: runtime.pathVertices.slice(),
+    output: runtime.output.slice(),
+    newOutputIndex: runtime.newOutputIndex,
+    phase: runtime.phase,
+    ...extra
+  };
+}
+
+function addStep(desc, lines, extra = {}) {
+  steps.push({
+    desc,
+    lines: Array.isArray(lines) ? lines : [lines],
+    ...cloneRuntime(extra)
+  });
+  runtime.newOutputIndex = -1;
+}
+
+function residualTo(edgeId, vertex) {
+  const e = EDGE_BY_ID[edgeId];
+  const flow = runtime.flows[edgeId];
+  if (vertex === e.v) return flow;
+  if (vertex === e.w) return e.capacity - flow;
+  return 0;
+}
+
+function other(edgeId, vertex) {
+  const e = EDGE_BY_ID[edgeId];
+  return vertex === e.v ? e.w : e.v;
+}
+
+function adjIds(vertex) {
+  return EDGE_DEFS.filter(e => runtime.built.includes(e.id) && (e.v === vertex || e.w === vertex)).map(e => e.id);
+}
+
+function pathFromPrev() {
+  const segments = [];
+  const vertices = [SINK];
+  for (let v = SINK; v !== SOURCE;) {
+    const p = runtime.prev[v];
+    if (!p) break;
+    segments.push({ edgeId: p.edgeId, to: v });
+    v = other(p.edgeId, v);
+    vertices.push(v);
+  }
+  return { segments, vertices: vertices.reverse() };
+}
+
+function sendFlow(edgeId, to, delta) {
+  const e = EDGE_BY_ID[edgeId];
+  if (to === e.v) runtime.flows[edgeId] -= delta;
+  else if (to === e.w) runtime.flows[edgeId] += delta;
+}
+
+function buildHasAugmentingPath(iteration) {
+  runtime.phase = 'bfs';
+  runtime.marked = Array(V).fill(false);
+  runtime.queue = [];
+  runtime.currentVertex = null;
+  runtime.currentEdge = null;
+  runtime.pathEdgeIds = [];
+  runtime.pathVertices = [];
+  runtime.bottle = null;
+  addStep(`${iteration}번째 HasAugmentingPath()를 시작한다. 코드처럼 marked만 false로 초기화하고 BFS 큐를 준비한다.`, [L.hasPath, L.fillMarked, L.queueDecl]);
+
+  runtime.marked[SOURCE] = true;
+  runtime.queue.push(SOURCE);
+  addStep(`소스 정점 s=${SOURCE}를 marked로 표시하고 큐에 넣는다.`, [L.markSource, L.pushSource], { currentVertex: SOURCE });
+
+  while (runtime.queue.length > 0) {
+    const v = runtime.queue.shift();
+    runtime.currentVertex = v;
+    addStep(`큐의 맨 앞 정점 ${v}를 꺼내고, adj[${v}]에 저장된 FlowEdge*들을 순서대로 검사한다.`, [L.bfsWhile, L.popFront, L.popQueue], { currentVertex: v });
+
+    for (const edgeId of adjIds(v)) {
+      const w = other(edgeId, v);
+      const residual = residualTo(edgeId, w);
+      runtime.currentEdge = edgeId;
+      addStep(`간선 ${edgeText(edgeId)}를 현재 정점 ${v} 기준으로 본다. Other(${v}) = ${w}, ResidualCapacityTo(${w}) = ${fmt(residual)}이다.`, [L.scanLoop, L.otherW], { currentEdge: edgeId, currentVertex: v });
+
+      if (!runtime.marked[w] && residual > 0) {
+        runtime.prev[w] = { edgeId, from: v };
+        runtime.marked[w] = true;
+        runtime.queue.push(w);
+        addStep(`${w}는 아직 방문하지 않았고 잔여 용량이 남아 있다. prev[${w}]에 이 간선을 저장하고 ${w}를 큐에 넣는다.`, [L.residualIf, L.setPrev, L.setMarked, L.pushW], { currentEdge: edgeId, currentVertex: v });
+      } else {
+        const reason = runtime.marked[w] ? `${w}가 이미 marked 상태` : `잔여 용량이 0`;
+        addStep(`${reason}이므로 q.push(${w})를 실행하지 않는다. 따라서 이 방향으로는 BFS를 확장하지 않는다.`, [L.residualIf], { currentEdge: edgeId, currentVertex: v });
+      }
+    }
+    runtime.currentEdge = null;
+  }
+
+  const found = runtime.marked[SINK];
+  if (found) {
+    const path = pathFromPrev();
+    runtime.pathEdgeIds = path.segments.map(s => s.edgeId);
+    runtime.pathVertices = path.vertices;
+    addStep(`marked[t]가 true이므로 증가 경로 ${path.vertices.join(' -> ')}를 찾았다.`, [L.returnMarked], { phase: 'path' });
+  } else {
+    addStep(`marked[t]가 false이다. 더 이상 s에서 t까지 갈 수 있는 잔여 경로가 없으므로 반복을 종료한다.`, [L.returnMarked], { phase: 'done' });
+  }
+  return found;
+}
+
+function augment(iteration) {
+  const path = pathFromPrev();
+  runtime.pathEdgeIds = path.segments.map(s => s.edgeId);
+  runtime.pathVertices = path.vertices;
+  runtime.phase = 'augment';
+  runtime.bottle = Infinity;
+  addStep(`${iteration}번째 증가 경로의 병목 용량 bottle을 무한대로 시작한다.`, [L.bottleInit], { phase: 'augment' });
+
+  for (const segment of path.segments) {
+    const residual = residualTo(segment.edgeId, segment.to);
+    runtime.currentEdge = segment.edgeId;
+    runtime.bottle = Math.min(runtime.bottle, residual);
+    addStep(`t에서 s 방향으로 거꾸로 따라가며 ${edgeText(segment.edgeId)}의 ResidualCapacityTo(${segment.to}) = ${fmt(residual)}을 확인한다. 현재 bottle = ${fmt(runtime.bottle)}이다.`, [L.bottleLoop, L.bottleMin], { currentEdge: segment.edgeId, phase: 'augment' });
+  }
+
+  for (const segment of path.segments) {
+    runtime.currentEdge = segment.edgeId;
+    sendFlow(segment.edgeId, segment.to, runtime.bottle);
+    const edge = EDGE_BY_ID[segment.edgeId];
+    const op = segment.to === edge.w ? '정방향 flow 증가' : '역방향 flow 감소';
+    addStep(`AddResidualFlowTo(${segment.to}, ${fmt(runtime.bottle)})를 실행한다. ${edgeText(segment.edgeId)}는 ${op}가 적용되어 ${fmt(runtime.flows[segment.edgeId])}/${fmt(edge.capacity)}가 된다.`, [L.addLoop, L.addFlow], { currentEdge: segment.edgeId, phase: 'augment' });
+  }
+
+  runtime.value += runtime.bottle;
+  runtime.currentEdge = null;
+  addStep(`증가 경로로 보낸 ${fmt(runtime.bottle)}만큼 전체 최대 유량 후보 value를 갱신한다. value = ${fmt(runtime.value)}.`, [L.valueAdd], { phase: 'augment' });
+}
+
+function emit(line, lines, desc = null) {
+  runtime.output.push(line);
+  runtime.newOutputIndex = runtime.output.length - 1;
+  addStep(desc || `Print(g)가 출력한다: ${line}`, lines, { phase: 'print' });
+}
+
+function buildSteps() {
+  runtime = freshRuntime();
+  addStep(`main()에서 FlowNetwork g(${V})를 생성한다. 생성자는 정점 수 V=${V}, 간선 수 E=0, 빈 adj 리스트 ${V}개를 만든다.`, [L.mainNetwork, L.flowNetworkCtor, L.flowNetworkInit]);
+
+  for (const edge of EDGE_DEFS) {
+    runtime.pendingEdge = edge.id;
+    addStep(`FlowEdge(${edge.v}, ${edge.w}, ${fmt(edge.capacity)}) 생성자가 capacity=${fmt(edge.capacity)}, flow=0.0인 간선을 만든다.`, [L.mainEdges, L.flowEdgeCtor, L.flowEdgeInit], { currentEdge: edge.id, pendingEdge: edge.id });
+    runtime.built.push(edge.id);
+    addStep(`AddEdge()가 Either()와 Other()로 양 끝 정점을 구한 뒤, ${edge.v}->${edge.w} 간선 포인터를 adj[${edge.v}]와 adj[${edge.w}] 양쪽에 저장한다.`, [L.mainAdd, L.addEdge, L.addEdgeCopy, L.addEdgeFrom, L.addEdgeOther, L.addEdgePushV, L.addEdgePushW], { currentEdge: edge.id, pendingEdge: null });
+    runtime.pendingEdge = null;
+  }
+
+  runtime.phase = 'constructor';
+  addStep('FordFulkerson f(g, 0, g.V - 1)를 생성한다. marked, prev, value를 초기화하고 증가 경로 탐색 반복을 시작한다.', [L.mainFF, L.ffCtor, L.ffInit, L.whileAug]);
+
+  let iteration = 1;
+  while (buildHasAugmentingPath(iteration)) {
+    augment(iteration);
+    emitPrintBlock(iteration);
+    iteration++;
+    runtime.phase = 'constructor';
+    addStep('while 조건으로 돌아가 다음 증가 경로가 남아 있는지 다시 HasAugmentingPath()를 호출한다.', [L.whileAug]);
+  }
+
+  runtime.currentEdge = null;
+  runtime.currentVertex = null;
+  runtime.pathEdgeIds = [];
+  runtime.pathVertices = [];
+  runtime.bottle = null;
+}
+
+function emitPrintBlock(iteration) {
+  runtime.currentEdge = null;
+  runtime.currentVertex = null;
+  emit(`Result:`, [L.print], `${iteration}번째 증가 후 Print(g)가 결과 블록 출력을 시작한다.`);
+  for (const edge of EDGE_DEFS) {
+    emit(`${edge.v}->${edge.w} ${fmt(runtime.flows[edge.id])}/${fmt(edge.capacity)}`, [L.print], `Print(g)가 현재 간선 유량을 출력한다: ${edge.v}->${edge.w} ${fmt(runtime.flows[edge.id])}/${fmt(edge.capacity)}`);
+  }
+  emit(fmt(runtime.value), [L.print], `Print(g)가 현재 value=${fmt(runtime.value)}를 출력한다.`);
+}
+
+function fmt(value) {
+  if (value === null || value === undefined) return '-';
+  if (value === Infinity) return '∞';
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function edgeText(edgeId) {
+  const e = EDGE_BY_ID[edgeId];
+  return `${e.v}->${e.w}`;
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+function syntax(line) {
+  let out = escapeHtml(line);
+  out = out.replace(/(\/\/.*)$/g, '<span class="cm">$1</span>');
+  out = out.replace(/"([^"]*)"/g, '<span class="str">"$1"</span>');
+  out = out.replace(/\b(class|public|int|double|bool|void|return|if|else|while|for|const|auto|true|false|using|namespace|include)\b/g, '<span class="kw">$1</span>');
+  out = out.replace(/\b(FlowEdge|FlowNetwork|FordFulkerson|vector|list|queue|numeric_limits)\b/g, '<span class="tp">$1</span>');
+  out = out.replace(/\b(AddEdge|HasAugmentingPath|ResidualCapacityTo|AddResidualFlowTo|Other|Either|From|To|Capacity|Flow|AllEdges|Adj|Print|push|pop|front|push_back|begin|end|fill|min)\b/g, '<span class="fn">$1</span>');
+  out = out.replace(/\b([0-9]+(?:\.[0-9]+)?)\b/g, '<span class="num">$1</span>');
+  return out;
+}
+
+function indentOf(line) {
+  const match = line.match(/^ */);
+  return Math.floor((match ? match[0].length : 0) / 4);
+}
+
+let current = 0;
+let currentExampleKey = 'lecture';
+
+function setExample(exampleKey) {
+  if (exampleKey === currentExampleKey && steps.length > 0) return;
+  configureExample(exampleKey);
+}
+
+function configureExample(exampleKey) {
+  const example = EXAMPLES[exampleKey];
+  currentExampleKey = exampleKey;
+  V = example.V;
+  SOURCE = example.source;
+  SINK = example.sink;
+  NODES = example.nodes;
+  EDGE_DEFS = example.edges;
+  EDGE_BY_ID = Object.fromEntries(EDGE_DEFS.map(e => [e.id, e]));
+  POS = Object.fromEntries(NODES.map(n => [n.id, n]));
+  CODE = codeForExample(exampleKey);
+  L = computeLineRefs();
+  steps = [];
+  current = 0;
+  buildSteps();
+  document.querySelector('h1').textContent = example.title;
+  document.getElementById('tab-lecture').classList.toggle('active', exampleKey === 'lecture');
+  document.getElementById('tab-clrs').classList.toggle('active', exampleKey === 'clrs');
+  render();
+}
+
+function render() {
+  const step = steps[current];
+  document.getElementById('step-counter').textContent = `Step ${current + 1} / ${steps.length}`;
+  document.getElementById('step-desc').innerHTML = step.desc;
+  renderStepCode(step);
+  renderGraph(step);
+  renderState(step);
+  renderAdj(step);
+  renderResidual(step);
+  renderOutput(step);
+  renderCode(step);
+  renderDots();
+  document.getElementById('prev').disabled = current === 0;
+  document.getElementById('reset').disabled = current === 0;
+  document.getElementById('next').disabled = current === steps.length - 1;
+}
+
+function renderStepCode(step) {
+  const wrap = document.getElementById('step-code-lines');
+  wrap.innerHTML = '';
+  const maxRows = Math.max(...steps.map(s => s.lines.length));
+  document.documentElement.style.setProperty('--step-code-row-count', maxRows);
+  for (const n of step.lines) {
+    const text = CODE[n - 1] || '';
+    const row = document.createElement('div');
+    row.className = 'step-code-row';
+    row.innerHTML = `<div class="step-code-line">${n}</div><div class="step-code-text" style="--indent:${indentOf(text)}">${syntax(text.trimStart())}</div>`;
+    wrap.appendChild(row);
+  }
+}
+
+function edgeColor(edge, step) {
+  const flow = step.flows[edge.id] || 0;
+  if (step.currentEdge === edge.id) return '#f7b267';
+  if (step.pathEdgeIds.includes(edge.id)) return '#4ec9b0';
+  if (flow > 0 && flow >= edge.capacity) return '#f44747';
+  if (flow > 0) return '#569cd6';
+  return '#6a6a6a';
+}
+
+function renderGraph(step) {
+  const edgeGroup = document.getElementById('edge-group');
+  const labelGroup = document.getElementById('label-group');
+  const nodeGroup = document.getElementById('node-group');
+  edgeGroup.innerHTML = '';
+  labelGroup.innerHTML = '';
+  nodeGroup.innerHTML = '';
+
+  for (const edge of EDGE_DEFS) {
+    const built = step.built.includes(edge.id);
+    const pending = step.pendingEdge === edge.id;
+    if (!built && !pending) continue;
+    const a = POS[edge.v], b = POS[edge.w];
+    const geometry = shortenedLine(a.x, a.y, b.x, b.y, 30);
+    const color = pending ? '#858585' : edgeColor(edge, step);
+    const width = step.currentEdge === edge.id || step.pathEdgeIds.includes(edge.id) ? 4 : 2.5;
+
+    const line = svgEl('line', {
+      x1: geometry.x1, y1: geometry.y1, x2: geometry.x2, y2: geometry.y2,
+      stroke: color, 'stroke-width': width, 'stroke-linecap': 'round',
+      'stroke-dasharray': pending ? '6 5' : ''
+    });
+    edgeGroup.appendChild(line);
+    edgeGroup.appendChild(arrowHead(geometry.x1, geometry.y1, geometry.x2, geometry.y2, color));
+
+    const midX = (a.x + b.x) / 2 + edge.labelOffset.x;
+    const midY = (a.y + b.y) / 2 + edge.labelOffset.y;
+    const bg = svgEl('rect', { x: midX - 25, y: midY - 12, width: 50, height: 22, rx: 5, fill: '#1e1e1e', stroke: '#343434' });
+    const text = svgEl('text', { x: midX, y: midY + 4, 'text-anchor': 'middle', fill: color, 'font-size': 12, 'font-weight': 700 });
+    text.textContent = `${fmt(step.flows[edge.id] || 0)}/${fmt(edge.capacity)}`;
+    labelGroup.appendChild(bg);
+    labelGroup.appendChild(text);
+  }
+
+  for (const node of NODES) {
+    const isMarked = step.marked[node.id];
+    const isCurrent = step.currentVertex === node.id;
+    const inPath = step.pathVertices.includes(node.id);
+    const fill = isCurrent ? '#3a2b1f' : inPath ? '#1f3a34' : isMarked ? '#1f2f3d' : '#2d2d2d';
+    const stroke = isCurrent ? '#f7b267' : inPath ? '#4ec9b0' : isMarked ? '#569cd6' : '#5a5a5a';
+    nodeGroup.appendChild(svgEl('circle', { cx: node.x, cy: node.y, r: 27, fill, stroke, 'stroke-width': isCurrent || inPath ? 3 : 2 }));
+    const label = svgEl('text', { x: node.x, y: node.y + 5, 'text-anchor': 'middle', fill: '#d4d4d4', 'font-size': 16, 'font-weight': 700 });
+    label.textContent = node.label;
+    nodeGroup.appendChild(label);
+  }
+}
+
+function shortenedLine(x1, y1, x2, y2, pad) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  return { x1: x1 + ux * pad, y1: y1 + uy * pad, x2: x2 - ux * pad, y2: y2 - uy * pad };
+}
+
+function arrowHead(x1, y1, x2, y2, color) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const size = 10;
+  const p1 = { x: x2, y: y2 };
+  const p2 = { x: x2 - size * Math.cos(angle - Math.PI / 6), y: y2 - size * Math.sin(angle - Math.PI / 6) };
+  const p3 = { x: x2 - size * Math.cos(angle + Math.PI / 6), y: y2 - size * Math.sin(angle + Math.PI / 6) };
+  return svgEl('polygon', { points: `${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`, fill: color });
+}
+
+function svgEl(name, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value !== '') el.setAttribute(key, value);
+  }
+  return el;
+}
+
+function renderState(step) {
+  document.getElementById('source-value').textContent = `s = ${SOURCE}`;
+  document.getElementById('sink-value').textContent = `t = ${SINK}`;
+  document.getElementById('flow-value').textContent = fmt(step.value);
+  document.getElementById('bottle-value').textContent = fmt(step.bottle);
+  const queueRow = document.getElementById('queue-row');
+  queueRow.innerHTML = step.queue.length ? step.queue.map(v => `<span class="chip ff-queue">${v}</span>`).join('') : '<span class="chip ff-empty">empty</span>';
+  const currentEdge = step.currentEdge ? edgeText(step.currentEdge) : '-';
+  const currentVertex = step.currentVertex === null ? '-' : step.currentVertex;
+  document.getElementById('current-row').innerHTML = `<span class="chip ff-current">v: ${currentVertex}</span><span class="chip ff-current">edge: ${currentEdge}</span>`;
+
+  const marked = document.getElementById('marked-row');
+  marked.innerHTML = '';
+  step.marked.forEach((value, idx) => {
+    const cell = document.createElement('div');
+    cell.className = `array-cell ${value ? 'ff-marked' : ''} ${step.currentVertex === idx ? 'ff-current' : ''}`.trim();
+    cell.innerHTML = `<div class="array-label">${idx}</div><div class="array-value">${value ? 'T' : 'F'}</div>`;
+    marked.appendChild(cell);
+  });
+
+  const prev = document.getElementById('prev-row');
+  prev.innerHTML = '';
+  step.prev.forEach((value, idx) => {
+    const cell = document.createElement('div');
+    cell.className = 'array-cell';
+    const visiblePrev = idx !== SOURCE && step.marked[idx] && value;
+    cell.innerHTML = `<div class="array-label">${idx}</div><div class="array-value">${visiblePrev ? edgeText(value.edgeId) : '-'}</div>`;
+    prev.appendChild(cell);
+  });
+
+  const pathRow = document.getElementById('path-row');
+  if (step.pathVertices.length > 0) {
+    pathRow.innerHTML = step.pathVertices.map(v => `<span class="chip ff-path">${v}</span>`).join('<span class="chip ff-empty">→</span>');
+  } else {
+    pathRow.innerHTML = '<span class="chip ff-empty">not found yet</span>';
+  }
+}
+
+function renderAdj(step) {
+  const wrap = document.getElementById('adj-table');
+  wrap.innerHTML = '';
+  for (let v = 0; v < V; v++) {
+    const row = document.createElement('div');
+    row.className = 'adj-row';
+    const cards = EDGE_DEFS.filter(e => step.built.includes(e.id) && (e.v === v || e.w === v)).map(e => {
+      const side = e.v === v ? 'out' : 'in';
+      const cls = cardClass(e, step);
+      return `<div class="edge-card ${cls}">
+        <div class="edge-main">${edgeText(e.id)}</div>
+        <div class="edge-sub">${side} · flow ${fmt(step.flows[e.id])}/${fmt(e.capacity)}</div>
+      </div>`;
+    }).join('');
+    row.innerHTML = `<div class="vertex-badge">${v}</div><div class="edge-list">${cards || '<span class="chip ff-empty">empty</span>'}</div>`;
+    wrap.appendChild(row);
+  }
+}
+
+function renderResidual(step) {
+  const wrap = document.getElementById('residual-table');
+  wrap.innerHTML = '';
+  for (const edge of EDGE_DEFS.filter(e => step.built.includes(e.id))) {
+    const fwd = edge.capacity - step.flows[edge.id];
+    const back = step.flows[edge.id];
+    const row = document.createElement('div');
+    row.className = 'residual-row';
+    row.innerHTML = `<div class="vertex-badge">${edge.v}→${edge.w}</div>
+      <div class="edge-list">
+        <div class="residual-card ${cardClass(edge, step)}">
+          <div class="residual-line">to ${edge.w}: capacity - flow = ${fmt(fwd)}</div>
+          <div class="residual-line">to ${edge.v}: flow = ${fmt(back)}</div>
+        </div>
+      </div>`;
+    wrap.appendChild(row);
+  }
+}
+
+function cardClass(edge, step) {
+  if (step.currentEdge === edge.id) return 'ff-current';
+  if (step.pathEdgeIds.includes(edge.id)) return 'ff-path';
+  if ((step.flows[edge.id] || 0) > 0 && step.flows[edge.id] >= edge.capacity) return 'ff-saturated';
+  if ((step.flows[edge.id] || 0) > 0) return 'ff-flow';
+  return '';
+}
+
+function renderOutput(step) {
+  const wrap = document.getElementById('output-lines');
+  const maxRows = Math.min(18, Math.max(7, ...steps.map(s => s.output.length)));
+  document.documentElement.style.setProperty('--output-row-count', maxRows);
+  if (!step.output.length) {
+    wrap.innerHTML = '<div class="output-empty">empty</div>';
+    return;
+  }
+  wrap.innerHTML = step.output.map((line, idx) => `
+    <div class="output-row ${idx === step.newOutputIndex ? 'ff-new' : ''}">
+      <div class="output-line-no">${idx + 1}</div>
+      <div class="output-text">${escapeHtml(line)}</div>
+    </div>`).join('');
+}
+
+function renderCode(step) {
+  const body = document.getElementById('code-body');
+  const active = new Set(step.lines);
+  body.innerHTML = CODE.map((line, i) => {
+    const n = i + 1;
+    return `<div class="cline ${active.has(n) ? 'ff-hl' : ''}" id="code-line-${n}">
+      <div class="lnum">${n}</div>
+      <div class="lcode" style="--indent:${indentOf(line)}">${syntax(line.trimStart())}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderDots() {
+  const dots = document.getElementById('dots');
+  dots.innerHTML = steps.map((_, idx) => `<button class="dot ${idx === current ? 'ff-dot-on' : ''}" onclick="goTo(${idx})" title="Step ${idx + 1}"></button>`).join('');
+}
+
+function go(delta) {
+  goTo(current + delta);
+}
+
+function goTo(index) {
+  current = Math.max(0, Math.min(steps.length - 1, index));
+  render();
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'ArrowRight') go(1);
+  else if (event.key === 'ArrowLeft') go(-1);
+  else if (event.key === 'Home') goTo(0);
+  else if (event.key === 'End') goTo(steps.length - 1);
+});
+
+configureExample('lecture');
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>
