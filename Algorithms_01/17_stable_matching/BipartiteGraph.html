@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bipartite Graph / 이분 그래프 판정</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:8px;letter-spacing:.2px}
+#subtitle{font-size:11px;color:#858585;margin-bottom:10px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:58px;line-height:1.6;padding:8px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#step-code{margin-top:6px;background:#1e1e1e;border:1px solid #3e3e42;border-left:3px solid #dcdcaa;border-radius:0 4px 4px 0;overflow:hidden}
+.step-code-label{padding:4px 10px;border-bottom:1px solid #3e3e42;color:#858585;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+#step-code-lines{height:92px;overflow:auto;padding:4px 0}
+.step-code-row{display:flex;min-height:21px}
+.step-code-line{width:42px;text-align:right;padding:3px 10px 3px 0;color:#666;font-size:11px;flex-shrink:0}
+.step-code-text{position:relative;flex:1;padding:3px 10px 3px calc(var(--indent,0) * 18px + 10px);font-size:12px;line-height:1.45;color:#d4d4d4;white-space:pre;overflow-x:auto}
+.step-code-text::before{content:"";position:absolute;left:10px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.1) 13px 14px,transparent 14px 18px);pointer-events:none}
+#example-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.example-tab{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;border-radius:4px;padding:6px 12px;font-family:inherit;font-size:12px;cursor:pointer}
+.example-tab.is-on{border-color:#569cd6;background:rgba(86,156,214,.16);color:#d9ecff}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 10px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:12px;height:12px;border-radius:50%;border:1.5px solid}
+#main-content{display:grid;grid-template-columns:minmax(440px,1.05fr) minmax(420px,.95fr);grid-template-areas:"graph state" "output output" "code code";gap:14px;margin-top:12px;align-items:stretch}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:10px 12px;min-width:0}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#graph-panel{grid-area:graph;display:flex;flex-direction:column;min-height:474px}
+#state-panel{grid-area:state;display:flex;flex-direction:column;gap:8px;min-height:474px}
+#output-panel{grid-area:output}
+#code-panel{grid-area:code;background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden}
+#graph-svg{width:100%;height:390px;display:block;flex:0 0 auto}
+.graph-note,.state-note,.output-note{font-size:11px;color:#858585;line-height:1.55;margin-top:8px}
+.metric-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.metric-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:58px}
+.metric-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.metric-value{font-size:17px;font-weight:700;color:#dcdcaa;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.state-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.state-box{background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:8px;min-width:0}
+.chip-row{display:flex;gap:5px;flex-wrap:wrap;min-height:28px;align-items:center}
+.chip{border:1px solid #3e3e42;background:#252526;border-radius:4px;padding:4px 8px;font-size:12px;color:#d4d4d4;white-space:nowrap}
+.chip.empty{color:#555;border-color:#343434;background:#1f1f1f}
+.chip.queue{border-color:#569cd6;color:#d9ecff;background:rgba(86,156,214,.12)}
+.chip.current,.chip.compare,.chip.conflict{border-color:#6a6a6a;color:#d4d4d4;background:#2d2d2d}
+.array-row{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px}
+.array-cell{width:54px;min-width:54px;min-height:52px;border:1px solid #3e3e42;border-radius:6px;background:#1f1f1f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.array-cell.color0{border-color:#569cd6;background:rgba(86,156,214,.11)}
+.array-cell.color1{border-color:#4ec9b0;background:rgba(78,201,176,.10)}
+.array-cell.active-u,.array-cell.active-v,.array-cell.conflict{box-shadow:0 0 0 2px rgba(212,212,212,.7) inset}
+.array-label{font-size:10px;color:#666}
+.array-value{font-size:13px;font-weight:700;color:#d4d4d4}
+.array-value.uncolored{color:#555}
+#matrix-wrap{overflow:auto;border:1px solid #343434;border-radius:6px;background:#1e1e1e;padding:8px}
+.matrix{border-collapse:separate;border-spacing:4px;margin:auto}
+.matrix th{color:#858585;font-size:10px;font-weight:400;min-width:28px;height:24px;text-align:center}
+.matrix td{width:34px;height:32px;text-align:center;border:1px solid #3e3e42;border-radius:4px;background:#252526;color:#777;font-weight:700}
+.matrix td.edge{color:#d4d4d4;background:#2d2d2d}
+.matrix td.diagonal{color:#555;background:#1f1f1f}
+.matrix td.active,.matrix td.conflict{border-color:#d4d4d4;background:rgba(212,212,212,.08);color:#f0f0f0}
+#output-lines{height:178px;overflow:auto;background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:6px 0}
+.output-row{display:flex;min-height:22px;line-height:22px}
+.output-row.new{background:rgba(220,220,170,.08);border-left:2px solid #dcdcaa}
+.output-row.false,.output-row.true{background:rgba(212,212,212,.06);border-left:2px solid #858585}
+.output-line-no{width:38px;text-align:right;padding-right:10px;color:#555;font-size:11px;flex-shrink:0}
+.output-text{flex:1;color:#d4d4d4;font-size:12px;white-space:pre}
+.output-empty{color:#555;font-size:12px;padding:3px 10px}
+.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0;max-height:640px;overflow:auto}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.07);border-left-color:#dcdcaa}
+.lnum{width:44px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;min-width:860px}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}.str{color:#ce9178}
+#nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 18px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:720px;justify-content:center}
+.dot{width:6px;height:6px;border:0;padding:0;border-radius:50%;background:#3e3e42;appearance:none;-webkit-appearance:none;cursor:pointer}
+.dot.on{background:#858585}
+.node circle{fill:#2d2d2d;stroke:#555;stroke-width:2}
+.node text{fill:#d4d4d4;font-size:16px;font-weight:700;text-anchor:middle;dominant-baseline:middle}
+.node.color0 circle{--node-stroke:#569cd6;fill:rgba(86,156,214,.18);stroke:var(--node-stroke)}
+.node.color1 circle{--node-stroke:#4ec9b0;fill:rgba(78,201,176,.16);stroke:var(--node-stroke)}
+.node.current circle,.node.compare circle,.node.conflict circle{stroke:var(--node-stroke,#858585);stroke-width:4}
+.edge-line{stroke:#555;stroke-width:2;opacity:.8}
+.edge-line.compare,.edge-line.conflict{stroke:#d4d4d4;stroke-width:4;opacity:1}
+.edge-line.confirmed{stroke:#555;stroke-width:3;opacity:.95}
+.edge-label{fill:#858585;font-size:10px;text-anchor:middle}
+@media (max-width:1080px){#main-content{display:flex;flex-direction:column}#graph-panel,#state-panel{min-height:auto}.metric-row{grid-template-columns:repeat(2,minmax(0,1fr))}.state-two{grid-template-columns:1fr}#graph-svg{height:360px}}
+@media (max-width:640px){body{padding:12px}#step-desc{min-height:86px}.metric-row{grid-template-columns:1fr}.array-cell{width:48px;min-width:48px}.nbtn{padding:7px 8px;flex:1 1 0;min-width:0}#dots{display:none!important}#nav{gap:8px!important}#graph-svg{height:310px}.matrix td{width:30px;height:28px}.lcode{min-width:760px}}
+</style>
+</head>
+<body>
+<h1>Bipartite Graph / 이분 그래프 판정</h1>
+<div id="subtitle">Stable Matching / 안정적인 매칭을 위한 기초 판정: BFS로 인접 정점에 서로 다른 색을 부여합니다.</div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="step-code">
+  <div class="step-code-label">현재 실행 코드 / Current code</div>
+  <div id="step-code-lines"></div>
+</div>
+
+<div id="example-tabs">
+  <button class="example-tab is-on" id="tab-triangle" onclick="setExample('triangle')">예제 1: 삼각형 false</button>
+  <button class="example-tab" id="tab-bipartite" onclick="setExample('bipartite')">예제 2: 이분 그래프 true</button>
+  <button class="example-tab" id="tab-conflict" onclick="setExample('conflict')">예제 3: 0-1 추가 false</button>
+</div>
+
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:rgba(55,55,55,.5);border-color:#555"></div>미색칠 / -1</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(86,156,214,.18);border-color:#569cd6"></div>색 0</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(78,201,176,.16);border-color:#4ec9b0"></div>색 1</div>
+</div>
+
+<div id="main-content">
+  <div class="sbox" id="graph-panel">
+    <div class="slabel">Undirected Graph</div>
+    <svg id="graph-svg" viewBox="0 0 520 350" aria-label="Bipartite graph visualization">
+      <g id="edge-group"></g>
+      <g id="node-group"></g>
+    </svg>
+    <div class="graph-note">간선은 인접 행렬에서 값이 1인 관계입니다. 실제 색상은 0번 그룹과 1번 그룹만 사용하고, 현재 검사 중인 정점과 간선은 색을 바꾸지 않고 굵은 테두리로만 표시합니다.</div>
+  </div>
+
+  <div class="sbox" id="state-panel">
+    <div class="slabel">BFS State</div>
+    <div class="metric-row">
+      <div class="metric-card"><div class="metric-name">Current u</div><div class="metric-value" id="current-u">-</div></div>
+      <div class="metric-card"><div class="metric-name">Compare v</div><div class="metric-value" id="current-v">-</div></div>
+      <div class="metric-card"><div class="metric-name">Result</div><div class="metric-value" id="result-value">진행 중</div></div>
+      <div class="metric-card"><div class="metric-name">Queue size</div><div class="metric-value" id="queue-size">0</div></div>
+    </div>
+    <div class="state-two">
+      <div class="state-box">
+        <div class="slabel">Queue 앞 → 뒤</div>
+        <div class="chip-row" id="queue-row"></div>
+      </div>
+      <div class="state-box">
+        <div class="slabel">현재 검사</div>
+        <div class="chip-row" id="scan-row"></div>
+      </div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">colors 배열</div>
+      <div class="array-row" id="colors-row"></div>
+    </div>
+    <div class="state-box" style="flex:1 1 auto;min-height:0">
+      <div class="slabel">Adjacency Matrix</div>
+      <div id="matrix-wrap"></div>
+    </div>
+    <div class="state-note">이 코드는 0번 정점에서 BFS를 시작합니다. 연결 그래프 예제에서는 전체 그래프를 판정하고, 일반적인 전체 판정은 미방문 정점마다 BFS를 다시 시작하도록 확장합니다.</div>
+  </div>
+
+  <div class="sbox" id="output-panel">
+    <div class="slabel">cout 출력 결과</div>
+    <div id="output-lines"></div>
+    <div class="output-note">`Print(colors)`는 `for (int v = 0; v < V; ++v)`의 각 반복 시작 시점과 각 `u` 처리 종료 시점에 호출됩니다.</div>
+  </div>
+
+  <div id="code-panel">
+    <div class="code-title">Bipartite Graph Check Code</div>
+    <div id="code-body"></div>
+  </div>
+</div>
+
+<div id="nav">
+  <button class="nbtn" id="first" onclick="goTo(0)">처음</button>
+  <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="next" onclick="go(1)">다음 →</button>
+  <button class="nbtn" id="last" onclick="goTo(steps.length - 1)">끝</button>
+</div>
+
+<script>
+const CODE = [
+  {n:1,t:"#include <iostream>"},
+  {n:2,t:"#include <queue>"},
+  {n:3,t:"#include <vector>"},
+  {n:4,t:"#include <cassert>"},
+  {n:5,t:"#include <iomanip>"},
+  {n:6,t:"using namespace std;"},
+  {n:8,t:"void Print(vector<int>& colors)"},
+  {n:9,t:"{"},
+  {n:10,t:"    for (auto c : colors)"},
+  {n:11,t:"        cout << std::setw(3) << c;"},
+  {n:12,t:"    cout << endl;"},
+  {n:13,t:"}"},
+  {n:15,t:"bool IsBipartite(vector<vector<int>>& graph)"},
+  {n:16,t:"{"},
+  {n:17,t:"    int V = int(graph.size());"},
+  {n:18,t:"    vector<int> colors(V, -1);"},
+  {n:20,t:"    colors[0] = 0;"},
+  {n:22,t:"    queue <int> q;"},
+  {n:23,t:"    q.push(0);"},
+  {n:25,t:"    while (!q.empty())"},
+  {n:26,t:"    {"},
+  {n:27,t:"        //BFS 너비 우선 탐색"},
+  {n:28,t:"        int u = q.front();"},
+  {n:29,t:"        q.pop();"},
+  {n:31,t:"        assert(graph[u][u] == 0);"},
+  {n:33,t:"        for (int v = 0; v < V; ++v)"},
+  {n:34,t:"        {"},
+  {n:35,t:"            Print(colors);"},
+  {n:37,t:"            if (graph[u][v] && colors[v] == -1)"},
+  {n:38,t:"            {"},
+  {n:39,t:"                colors[v] = 1 - colors[u];"},
+  {n:40,t:"                q.push(v);"},
+  {n:41,t:"            }"},
+  {n:42,t:"            else if ( graph[u][v] && colors[u]==colors[v])"},
+  {n:43,t:"            {"},
+  {n:44,t:"                cout << u << \" \" << v << endl;"},
+  {n:45,t:"                return false;"},
+  {n:46,t:"            }"},
+  {n:47,t:"        }"},
+  {n:49,t:"        Print(colors);"},
+  {n:50,t:"    }"},
+  {n:52,t:"    return true;"},
+  {n:53,t:"}"},
+  {n:55,t:"int main()"},
+  {n:56,t:"{"},
+  {n:58,t:"    vector<vector<int>> graph = { /* 예제 선택 */ };"},
+  {n:59,t:"    cout << std::boolalpha << IsBipartite(graph) << endl;"},
+  {n:61,t:"    return 0;"},
+  {n:62,t:"}"}
+];
+
+const EXAMPLES = {
+  triangle: {
+    title: "예제 1: 삼각형 false",
+    graphLine: "{ {0,1,1}, {1,0,1}, {1,1,0} }",
+    matrix: [
+      [0,1,1],
+      [1,0,1],
+      [1,1,0]
+    ],
+    nodes: [
+      {id:0,x:260,y:72},
+      {id:1,x:130,y:278},
+      {id:2,x:390,y:278}
+    ]
+  },
+  bipartite: {
+    title: "예제 2: 이분 그래프 true",
+    graphLine: "{ {0,0,1,1}, {0,0,1,0}, {1,1,0,0}, {1,0,0,0} }",
+    matrix: [
+      [0,0,1,1],
+      [0,0,1,0],
+      [1,1,0,0],
+      [1,0,0,0]
+    ],
+    nodes: [
+      {id:0,x:135,y:105},
+      {id:1,x:135,y:245},
+      {id:2,x:385,y:105},
+      {id:3,x:385,y:245}
+    ]
+  },
+  conflict: {
+    title: "예제 3: 0-1 추가 false",
+    graphLine: "{ {0,1,1,1}, {1,0,1,0}, {1,1,0,0}, {1,0,0,0} }",
+    matrix: [
+      [0,1,1,1],
+      [1,0,1,0],
+      [1,1,0,0],
+      [1,0,0,0]
+    ],
+    nodes: [
+      {id:0,x:135,y:105},
+      {id:1,x:135,y:245},
+      {id:2,x:385,y:105},
+      {id:3,x:385,y:245}
+    ]
+  }
+};
+
+let activeExample = "triangle";
+let steps = [];
+let cur = 0;
+
+function escapeHtml(text){
+  return String(text).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function syntax(text){
+  let out = escapeHtml(text);
+  out = out.replace(/(\/\/.*)$/g, '<span class="cm">$1</span>');
+  out = out.replace(/\b(bool|int|void|return|if|else|while|for|auto|true|false|using|namespace)\b/g, '<span class="kw">$1</span>');
+  out = out.replace(/\b(vector|queue|string|cout|endl)\b/g, '<span class="tp">$1</span>');
+  out = out.replace(/\b(Print|IsBipartite|push|pop|front|empty|size|setw)\b/g, '<span class="fn">$1</span>');
+  out = out.replace(/\b(-?\d+)\b/g, '<span class="num">$1</span>');
+  return out;
+}
+
+function indentOf(line){
+  const match = line.match(/^ */);
+  return Math.floor((match ? match[0].length : 0) / 4);
+}
+
+function formatColors(colors){
+  return colors.map(c => String(c).padStart(3, " ")).join("");
+}
+
+function cloneState(colors, queue, output){
+  return {colors:colors.slice(), queue:queue.slice(), output:output.slice()};
+}
+
+function addStep(list, state, patch){
+  list.push(Object.assign({
+    desc:"",
+    hl:[],
+    currentU:null,
+    currentV:null,
+    activeEdge:null,
+    conflictEdge:null,
+    result:null,
+    newOutput:false,
+    graphLine:EXAMPLES[activeExample].graphLine
+  }, state, patch));
+}
+
+function buildEdges(matrix){
+  const edges = [];
+  for(let i=0;i<matrix.length;i++){
+    for(let j=i+1;j<matrix.length;j++){
+      if(matrix[i][j]) edges.push([i,j]);
+    }
+  }
+  return edges;
+}
+
+function simulate(exampleKey){
+  activeExample = exampleKey;
+  const ex = EXAMPLES[exampleKey];
+  const matrix = ex.matrix;
+  const V = matrix.length;
+  const colors = Array(V).fill(-1);
+  const queue = [];
+  const output = [];
+  const list = [];
+
+  addStep(list, cloneState(colors, queue, output), {
+    desc:`main()에서 ${ex.title} 인접 행렬을 만들고 IsBipartite(graph)를 호출할 준비를 합니다.`,
+    hl:[58,59],
+    result:"진행 중"
+  });
+
+  addStep(list, cloneState(colors, queue, output), {
+    desc:`V = ${V}로 정점 개수를 읽고 colors 배열을 모두 -1로 초기화합니다. -1은 아직 색이 지정되지 않았다는 뜻입니다.`,
+    hl:[17,18],
+    result:"진행 중"
+  });
+
+  colors[0] = 0;
+  addStep(list, cloneState(colors, queue, output), {
+    desc:"시작 정점 0의 색을 0으로 지정합니다.",
+    hl:[20],
+    currentU:0,
+    result:"진행 중"
+  });
+
+  queue.push(0);
+  addStep(list, cloneState(colors, queue, output), {
+    desc:"BFS 큐를 만들고 시작 정점 0을 큐에 넣습니다.",
+    hl:[22,23],
+    currentU:0,
+    result:"진행 중"
+  });
+
+  while(queue.length > 0){
+    addStep(list, cloneState(colors, queue, output), {
+      desc:"while (!q.empty()) 조건이 참입니다. 큐 앞 정점을 꺼내서 그 정점의 모든 이웃을 검사합니다.",
+      hl:[25],
+      result:"진행 중"
+    });
+
+    const u = queue[0];
+    addStep(list, cloneState(colors, queue, output), {
+      desc:`q.front()로 현재 처리할 정점 u = ${u}를 읽습니다.`,
+      hl:[28],
+      currentU:u,
+      result:"진행 중"
+    });
+
+    queue.shift();
+    addStep(list, cloneState(colors, queue, output), {
+      desc:`q.pop()으로 ${u}를 큐에서 제거합니다. 이제 ${u}의 행을 왼쪽부터 검사합니다.`,
+      hl:[29],
+      currentU:u,
+      result:"진행 중"
+    });
+
+    addStep(list, cloneState(colors, queue, output), {
+      desc:`assert(graph[${u}][${u}] == 0)으로 자기 자신에게 향하는 간선이 없음을 확인합니다.`,
+      hl:[31],
+      currentU:u,
+      currentV:u,
+      result:"진행 중"
+    });
+
+    for(let v=0; v<V; v++){
+      output.push(formatColors(colors));
+      addStep(list, cloneState(colors, queue, output), {
+        desc:`for 반복에서 v = ${v}를 검사하기 전에 Print(colors)를 실행합니다.`,
+        hl:[33,35],
+        currentU:u,
+        currentV:v,
+        activeEdge:[u,v],
+        result:"진행 중",
+        newOutput:true
+      });
+
+      if(matrix[u][v] && colors[v] === -1){
+        addStep(list, cloneState(colors, queue, output), {
+          desc:`graph[${u}][${v}]가 1이고 colors[${v}]가 -1입니다. 아직 색이 없는 이웃을 발견했습니다.`,
+          hl:[37],
+          currentU:u,
+          currentV:v,
+          activeEdge:[u,v],
+          result:"진행 중"
+        });
+
+        colors[v] = 1 - colors[u];
+        addStep(list, cloneState(colors, queue, output), {
+          desc:`colors[${v}] = 1 - colors[${u}]를 실행하여 이웃 정점 ${v}를 반대 색 ${colors[v]}로 칠합니다.`,
+          hl:[39],
+          currentU:u,
+          currentV:v,
+          activeEdge:[u,v],
+          result:"진행 중"
+        });
+
+        queue.push(v);
+        addStep(list, cloneState(colors, queue, output), {
+          desc:`새로 색칠한 정점 ${v}를 q.push(${v})로 큐 뒤에 넣습니다.`,
+          hl:[40],
+          currentU:u,
+          currentV:v,
+          activeEdge:[u,v],
+          result:"진행 중"
+        });
+      } else if(matrix[u][v] && colors[u] === colors[v]){
+        addStep(list, cloneState(colors, queue, output), {
+          desc:`graph[${u}][${v}]가 1인데 colors[${u}]와 colors[${v}]가 모두 ${colors[u]}입니다. 같은 색 정점끼리 연결되어 충돌입니다.`,
+          hl:[42],
+          currentU:u,
+          currentV:v,
+          activeEdge:[u,v],
+          conflictEdge:[u,v],
+          result:"false"
+        });
+
+        output.push(`${u} ${v}`);
+        addStep(list, cloneState(colors, queue, output), {
+          desc:`충돌 간선의 두 끝점 "${u} ${v}"를 출력합니다.`,
+          hl:[44],
+          currentU:u,
+          currentV:v,
+          activeEdge:[u,v],
+          conflictEdge:[u,v],
+          result:"false",
+          newOutput:true
+        });
+
+        addStep(list, cloneState(colors, queue, output), {
+          desc:"return false를 실행하여 이 그래프가 이분 그래프가 아님을 반환합니다.",
+          hl:[45],
+          currentU:u,
+          currentV:v,
+          activeEdge:[u,v],
+          conflictEdge:[u,v],
+          result:"false"
+        });
+
+        output.push("false");
+        addStep(list, cloneState(colors, queue, output), {
+          desc:"main()의 cout이 IsBipartite(graph)의 반환값 false를 출력합니다.",
+          hl:[59],
+          currentU:u,
+          currentV:v,
+          activeEdge:[u,v],
+          conflictEdge:[u,v],
+          result:"false",
+          newOutput:true
+        });
+        return list;
+      } else {
+        const reason = matrix[u][v]
+          ? `연결은 되어 있지만 colors[${u}] = ${colors[u]}, colors[${v}] = ${colors[v]}로 서로 다른 색입니다.`
+          : `graph[${u}][${v}]가 0이므로 검사할 간선이 없습니다.`;
+        addStep(list, cloneState(colors, queue, output), {
+          desc:`조건문을 검사합니다. ${reason}`,
+          hl: matrix[u][v] ? [37,42] : [37],
+          currentU:u,
+          currentV:v,
+          activeEdge:[u,v],
+          result:"진행 중"
+        });
+      }
+    }
+
+    output.push(formatColors(colors));
+    addStep(list, cloneState(colors, queue, output), {
+      desc:`정점 ${u}의 모든 v 검사가 끝났으므로 루프 밖의 Print(colors)를 한 번 더 실행합니다.`,
+      hl:[49],
+      currentU:u,
+      result:"진행 중",
+      newOutput:true
+    });
+  }
+
+  addStep(list, cloneState(colors, queue, output), {
+    desc:"큐가 비었으므로 while (!q.empty()) 조건이 거짓입니다. 같은 색 충돌을 찾지 못했습니다.",
+    hl:[25],
+    result:"true"
+  });
+
+  addStep(list, cloneState(colors, queue, output), {
+    desc:"return true를 실행하여 이 그래프가 이분 그래프임을 반환합니다.",
+    hl:[52],
+    result:"true"
+  });
+
+  output.push("true");
+  addStep(list, cloneState(colors, queue, output), {
+    desc:"main()의 cout이 IsBipartite(graph)의 반환값 true를 출력합니다.",
+    hl:[59],
+    result:"true",
+    newOutput:true
+  });
+
+  return list;
+}
+
+function lineClassForNode(step, id){
+  const cls = [];
+  const color = step.colors[id];
+  if(color === 0) cls.push("color0");
+  if(color === 1) cls.push("color1");
+  if(step.currentU === id) cls.push("current");
+  if(step.currentV === id) cls.push("compare");
+  if(step.conflictEdge && step.conflictEdge.includes(id)) cls.push("conflict");
+  return cls.join(" ");
+}
+
+function sameUndirected(a,b){
+  if(!a || !b) return false;
+  return (a[0] === b[0] && a[1] === b[1]) || (a[0] === b[1] && a[1] === b[0]);
+}
+
+function renderGraph(step){
+  const ex = EXAMPLES[activeExample];
+  const edges = buildEdges(ex.matrix);
+  const edgeGroup = document.getElementById("edge-group");
+  const nodeGroup = document.getElementById("node-group");
+  edgeGroup.innerHTML = "";
+  nodeGroup.innerHTML = "";
+  const pos = Object.fromEntries(ex.nodes.map(n => [n.id, n]));
+  const svgNS = "http://www.w3.org/2000/svg";
+
+  edges.forEach(edge => {
+    const [a,b] = edge;
+    const pa = pos[a];
+    const pb = pos[b];
+    const line = document.createElementNS(svgNS, "line");
+    line.setAttribute("x1", pa.x);
+    line.setAttribute("y1", pa.y);
+    line.setAttribute("x2", pb.x);
+    line.setAttribute("y2", pb.y);
+    let cls = "edge-line";
+    if(sameUndirected(step.activeEdge, edge)) cls += " compare";
+    if(sameUndirected(step.conflictEdge, edge)) cls += " conflict";
+    if(step.colors[a] >= 0 && step.colors[b] >= 0 && step.colors[a] !== step.colors[b]) cls += " confirmed";
+    line.setAttribute("class", cls);
+    edgeGroup.appendChild(line);
+
+    const label = document.createElementNS(svgNS, "text");
+    label.setAttribute("x", (pa.x + pb.x) / 2);
+    label.setAttribute("y", (pa.y + pb.y) / 2 - 8);
+    label.setAttribute("class", "edge-label");
+    label.textContent = `${a}-${b}`;
+    edgeGroup.appendChild(label);
+  });
+
+  ex.nodes.forEach(node => {
+    const g = document.createElementNS(svgNS, "g");
+    g.setAttribute("class", `node ${lineClassForNode(step, node.id)}`);
+    const c = document.createElementNS(svgNS, "circle");
+    c.setAttribute("cx", node.x);
+    c.setAttribute("cy", node.y);
+    c.setAttribute("r", "24");
+    const t = document.createElementNS(svgNS, "text");
+    t.setAttribute("x", node.x);
+    t.setAttribute("y", node.y + 1);
+    t.textContent = node.id;
+    g.appendChild(c);
+    g.appendChild(t);
+    nodeGroup.appendChild(g);
+  });
+}
+
+function renderArray(step){
+  const row = document.getElementById("colors-row");
+  row.innerHTML = "";
+  step.colors.forEach((value, i) => {
+    const cell = document.createElement("div");
+    let cls = "array-cell";
+    if(value === 0) cls += " color0";
+    if(value === 1) cls += " color1";
+    if(step.currentU === i) cls += " active-u";
+    if(step.currentV === i) cls += " active-v";
+    if(step.conflictEdge && step.conflictEdge.includes(i)) cls += " conflict";
+    cell.className = cls;
+    cell.innerHTML = `<div class="array-label">${i}</div><div class="array-value ${value === -1 ? "uncolored" : ""}">${value}</div>`;
+    row.appendChild(cell);
+  });
+}
+
+function renderMatrix(step){
+  const matrix = EXAMPLES[activeExample].matrix;
+  let html = '<table class="matrix"><thead><tr><th></th>';
+  for(let i=0;i<matrix.length;i++) html += `<th>${i}</th>`;
+  html += '</tr></thead><tbody>';
+  for(let r=0;r<matrix.length;r++){
+    html += `<tr><th>${r}</th>`;
+    for(let c=0;c<matrix.length;c++){
+      let cls = matrix[r][c] ? "edge" : "";
+      if(r === c) cls += " diagonal";
+      if(step.currentU === r && step.currentV === c) cls += " active";
+      if(step.conflictEdge && step.conflictEdge[0] === r && step.conflictEdge[1] === c) cls += " conflict";
+      html += `<td class="${cls.trim()}">${matrix[r][c]}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  document.getElementById("matrix-wrap").innerHTML = html;
+}
+
+function renderState(step){
+  document.getElementById("current-u").textContent = step.currentU === null ? "-" : step.currentU;
+  document.getElementById("current-v").textContent = step.currentV === null ? "-" : step.currentV;
+  document.getElementById("result-value").textContent = step.result || "진행 중";
+  document.getElementById("queue-size").textContent = step.queue.length;
+
+  const q = document.getElementById("queue-row");
+  q.innerHTML = step.queue.length
+    ? step.queue.map(x => `<span class="chip queue">${x}</span>`).join("")
+    : '<span class="chip empty">empty</span>';
+
+  const scan = document.getElementById("scan-row");
+  const chips = [];
+  if(step.currentU !== null) chips.push(`<span class="chip current">u = ${step.currentU}</span>`);
+  if(step.currentV !== null) chips.push(`<span class="chip compare">v = ${step.currentV}</span>`);
+  if(step.conflictEdge) chips.push(`<span class="chip conflict">conflict ${step.conflictEdge[0]}-${step.conflictEdge[1]}</span>`);
+  scan.innerHTML = chips.length ? chips.join("") : '<span class="chip empty">idle</span>';
+}
+
+function renderOutput(step){
+  const panel = document.getElementById("output-lines");
+  if(step.output.length === 0){
+    panel.innerHTML = '<div class="output-empty">empty</div>';
+    return;
+  }
+  const last = step.output.length - 1;
+  panel.innerHTML = step.output.map((line, i) => {
+    let cls = "output-row";
+    if(step.newOutput && i === last) cls += " new";
+    if(step.newOutput && i === last && line === "false") cls += " false";
+    if(step.newOutput && i === last && line === "true") cls += " true";
+    return `<div class="${cls}"><div class="output-line-no">${i+1}</div><div class="output-text">${escapeHtml(line)}</div></div>`;
+  }).join("");
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function renderCodeBody(step){
+  const body = document.getElementById("code-body");
+  const active = new Set(step.hl || []);
+  body.innerHTML = CODE.map(item => {
+    const indent = indentOf(item.t);
+    return `<div class="cline ${active.has(item.n) ? "hl" : ""}"><div class="lnum">${item.n}</div><div class="lcode" style="--indent:${indent}">${syntax(item.t)}</div></div>`;
+  }).join("");
+}
+
+function renderStepCode(step){
+  const box = document.getElementById("step-code-lines");
+  const active = new Set(step.hl || []);
+  const selected = CODE.filter(item => active.has(item.n));
+  box.innerHTML = selected.map(item => {
+    const indent = indentOf(item.t);
+    return `<div class="step-code-row"><div class="step-code-line">${item.n}</div><div class="step-code-text" style="--indent:${indent}">${syntax(item.t)}</div></div>`;
+  }).join("");
+}
+
+function buildDots(){
+  const dots = document.getElementById("dots");
+  dots.innerHTML = steps.map((_, i) => `<button class="dot" aria-label="${i+1}번 단계" onclick="goTo(${i})"></button>`).join("");
+}
+
+function render(){
+  const step = steps[cur];
+  document.getElementById("step-counter").textContent = `Step ${cur + 1} / ${steps.length}`;
+  document.getElementById("step-desc").textContent = step.desc;
+  document.querySelectorAll(".example-tab").forEach(btn => btn.classList.remove("is-on"));
+  document.getElementById(`tab-${activeExample}`).classList.add("is-on");
+  renderStepCode(step);
+  renderGraph(step);
+  renderState(step);
+  renderArray(step);
+  renderMatrix(step);
+  renderOutput(step);
+  renderCodeBody(step);
+  document.getElementById("prev").disabled = cur === 0;
+  document.getElementById("first").disabled = cur === 0;
+  document.getElementById("next").disabled = cur === steps.length - 1;
+  document.getElementById("last").disabled = cur === steps.length - 1;
+  document.querySelectorAll(".dot").forEach((dot, i) => dot.classList.toggle("on", i === cur));
+}
+
+function go(delta){
+  goTo(cur + delta);
+}
+
+function goTo(index){
+  cur = Math.max(0, Math.min(steps.length - 1, index));
+  render();
+}
+
+function setExample(key){
+  activeExample = key;
+  steps = simulate(key);
+  cur = 0;
+  buildDots();
+  render();
+}
+
+document.addEventListener("keydown", event => {
+  if(event.key === "ArrowLeft") go(-1);
+  if(event.key === "ArrowRight") go(1);
+  if(event.key === "Home") goTo(0);
+  if(event.key === "End") goTo(steps.length - 1);
+});
+
+setExample("triangle");
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>

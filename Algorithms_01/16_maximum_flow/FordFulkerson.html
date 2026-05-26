@@ -113,6 +113,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 <div id="example-tabs">
   <button class="example-tab active" id="tab-lecture" onclick="setExample('lecture')">강의 예제</button>
   <button class="example-tab" id="tab-clrs" onclick="setExample('clrs')">CLRS 예제</button>
+  <button class="example-tab" id="tab-matching" onclick="setExample('matching')">Maximum Matching</button>
 </div>
 <div id="main-content">
   <div class="sbox" id="graph-panel">
@@ -445,6 +446,47 @@ const EXAMPLES = {
       { id: 'e43', v: 4, w: 3, capacity: 7, labelOffset: { x: 24, y: 0 } },
       { id: 'e45', v: 4, w: 5, capacity: 4, labelOffset: { x: 8, y: 14 } }
     ]
+  },
+  matching: {
+    title: 'Ford-Fulkerson / Maximum Matching',
+    V: 12,
+    source: 0,
+    sink: 11,
+    nodes: [
+      { id: 0, x: 55, y: 210, label: '0 / s' },
+      { id: 1, x: 190, y: 55, label: '1' },
+      { id: 2, x: 190, y: 130, label: '2' },
+      { id: 3, x: 190, y: 205, label: '3' },
+      { id: 4, x: 190, y: 280, label: '4' },
+      { id: 5, x: 190, y: 355, label: '5' },
+      { id: 6, x: 485, y: 55, label: '6' },
+      { id: 7, x: 485, y: 130, label: '7' },
+      { id: 8, x: 485, y: 205, label: '8' },
+      { id: 9, x: 485, y: 280, label: '9' },
+      { id: 10, x: 485, y: 355, label: '10' },
+      { id: 11, x: 700, y: 210, label: '11 / t' }
+    ],
+    edges: [
+      { id: 'e01', v: 0, w: 1, capacity: 1, labelOffset: { x: -8, y: -8 } },
+      { id: 'e02', v: 0, w: 2, capacity: 1, labelOffset: { x: -8, y: -4 } },
+      { id: 'e03', v: 0, w: 3, capacity: 1, labelOffset: { x: -6, y: 0 } },
+      { id: 'e04', v: 0, w: 4, capacity: 1, labelOffset: { x: -8, y: 4 } },
+      { id: 'e05', v: 0, w: 5, capacity: 1, labelOffset: { x: -8, y: 8 } },
+      { id: 'e16', v: 1, w: 6, capacity: 1, labelOffset: { x: 0, y: -10 } },
+      { id: 'e17', v: 1, w: 7, capacity: 1, labelOffset: { x: -5, y: -8 } },
+      { id: 'e26', v: 2, w: 6, capacity: 1, labelOffset: { x: 5, y: -8 } },
+      { id: 'e36', v: 3, w: 6, capacity: 1, labelOffset: { x: 8, y: -4 } },
+      { id: 'e39', v: 3, w: 9, capacity: 1, labelOffset: { x: 0, y: -8 }, labelSide: -1, labelLift: 30 },
+      { id: 'e48', v: 4, w: 8, capacity: 1, labelOffset: { x: 16, y: 12 }, labelSide: 1, labelLift: 35 },
+      { id: 'e49', v: 4, w: 9, capacity: 1, labelOffset: { x: 0, y: -18 }, labelSide: -1, labelLift: 35 },
+      { id: 'e410', v: 4, w: 10, capacity: 1, labelOffset: { x: 20, y: 24 }, labelSide: 1, labelLift: 35 },
+      { id: 'e57', v: 5, w: 7, capacity: 1, labelOffset: { x: -45, y: 24 }, labelSide: -1, labelLift: 32 },
+      { id: 'e611', v: 6, w: 11, capacity: 1, labelOffset: { x: 10, y: -10 } },
+      { id: 'e711', v: 7, w: 11, capacity: 1, labelOffset: { x: 8, y: -5 } },
+      { id: 'e811', v: 8, w: 11, capacity: 1, labelOffset: { x: 8, y: 0 } },
+      { id: 'e911', v: 9, w: 11, capacity: 1, labelOffset: { x: 8, y: 5 } },
+      { id: 'e1011', v: 10, w: 11, capacity: 1, labelOffset: { x: 10, y: 10 } }
+    ]
   }
 };
 const CLRS_MAIN_LINES = [
@@ -464,14 +506,34 @@ const CLRS_MAIN_LINES = [
   '',
   '    return 0;'
 ];
+const MATCHING_MAIN_LINES = [
+  '    // Maximum matching 예제',
+  '    FlowNetwork g(12);',
+  '    vector<FlowEdge> edges = {',
+  '        {0, 1, 1}, {0, 2, 1}, {0, 3, 1}, {0, 4, 1}, {0, 5, 1},',
+  '        {1, 6, 1}, {1, 7, 1}, {2, 6, 1}, {3, 6, 1}, {3, 9, 1},',
+  '        {4, 8, 1}, {4, 9, 1}, {4, 10, 1},',
+  '        {5, 7, 1},',
+  '        {6, 11, 1}, {7, 11, 1}, {8, 11, 1}, {9, 11, 1}, {10, 11, 1} };',
+  '',
+  '    for (const auto& e : edges)',
+  '    {',
+  '        g.AddEdge(e);',
+  '    }',
+  '',
+  '    FordFulkerson f(g, 0, g.V - 1);',
+  '',
+  '    return 0;'
+];
 
 function codeForExample(exampleKey) {
   if (exampleKey === 'lecture') return LECTURE_CODE.slice();
+  const mainLines = exampleKey === 'matching' ? MATCHING_MAIN_LINES : CLRS_MAIN_LINES;
   const start = LECTURE_CODE.findIndex(line => line.includes('// 강의 영상에 나오는 예시'));
   const end = LECTURE_CODE.findIndex(line => line.includes('FordFulkerson f'));
   return [
     ...LECTURE_CODE.slice(0, start),
-    ...CLRS_MAIN_LINES,
+    ...mainLines,
     ...LECTURE_CODE.slice(end + 3)
   ];
 }
@@ -526,7 +588,7 @@ function computeLineRefs() {
     pushW: ln('q.push(w)', ln('prev[w] = e')),
     returnMarked: ln('return marked[t]'),
     mainNetwork: lnAny(['FlowNetwork g(4)', 'FlowNetwork g(6)']),
-    mainEdges: lnAny(['for (const auto& e', 'g.AddEdge({']),
+    mainEdges: lnAny(['for (const auto& e', 'g.AddEdge({', 'vector<FlowEdge> edges']),
     mainAdd: lnAny(['g.AddEdge(e)', 'g.AddEdge({']),
     mainFF: ln('FordFulkerson f')
   };
@@ -639,7 +701,8 @@ function buildHasAugmentingPath(iteration) {
   while (runtime.queue.length > 0) {
     const v = runtime.queue.shift();
     runtime.currentVertex = v;
-    addStep(`큐의 맨 앞 정점 ${v}를 꺼내고, adj[${v}]에 저장된 FlowEdge*들을 순서대로 검사한다.`, [L.bfsWhile, L.popFront, L.popQueue], { currentVertex: v });
+    addStep(`큐의 맨 앞 정점 ${v}를 확인하고 q.pop()으로 큐에서 제거한다. 이 단계에서는 아직 adj[${v}]의 간선을 검사하지 않는다.`, [L.bfsWhile, L.popFront, L.popQueue], { currentVertex: v });
+    addStep(`큐에서 꺼낸 정점 ${v}에 대해 adj[${v}]에 저장된 FlowEdge*들을 순서대로 검사하기 시작한다.`, [L.scanLoop], { currentVertex: v });
 
     for (const edgeId of adjIds(v)) {
       const w = other(edgeId, v);
@@ -804,6 +867,7 @@ function configureExample(exampleKey) {
   document.querySelector('h1').textContent = example.title;
   document.getElementById('tab-lecture').classList.toggle('active', exampleKey === 'lecture');
   document.getElementById('tab-clrs').classList.toggle('active', exampleKey === 'clrs');
+  document.getElementById('tab-matching').classList.toggle('active', exampleKey === 'matching');
   render();
 }
 
@@ -872,13 +936,16 @@ function renderGraph(step) {
     edgeGroup.appendChild(line);
     edgeGroup.appendChild(arrowHead(geometry.x1, geometry.y1, geometry.x2, geometry.y2, color));
 
-    const midX = (a.x + b.x) / 2 + edge.labelOffset.x;
-    const midY = (a.y + b.y) / 2 + edge.labelOffset.y;
-    const bg = svgEl('rect', { x: midX - 25, y: midY - 12, width: 50, height: 22, rx: 5, fill: '#1e1e1e', stroke: '#343434' });
-    const text = svgEl('text', { x: midX, y: midY + 4, 'text-anchor': 'middle', fill: color, 'font-size': 12, 'font-weight': 700 });
-    text.textContent = `${fmt(step.flows[edge.id] || 0)}/${fmt(edge.capacity)}`;
-    labelGroup.appendChild(bg);
-    labelGroup.appendChild(text);
+    const flow = step.flows[edge.id] || 0;
+    const showLabel = EDGE_DEFS.length <= 12 || step.currentEdge === edge.id || step.pathEdgeIds.includes(edge.id) || flow > 0;
+    if (showLabel) {
+      const label = labelPoint(edge, a, b);
+      const bg = svgEl('rect', { x: label.x - 30, y: label.y - 13, width: 60, height: 24, rx: 6, fill: '#1e1e1e', stroke: '#4a4a4a', 'stroke-width': 1.4 });
+      const text = svgEl('text', { x: label.x, y: label.y + 4, 'text-anchor': 'middle', fill: color, 'font-size': 12, 'font-weight': 700 });
+      text.textContent = `${fmt(flow)}/${fmt(edge.capacity)}`;
+      labelGroup.appendChild(bg);
+      labelGroup.appendChild(text);
+    }
   }
 
   for (const node of NODES) {
@@ -892,6 +959,29 @@ function renderGraph(step) {
     label.textContent = node.label;
     nodeGroup.appendChild(label);
   }
+}
+
+function labelPoint(edge, a, b) {
+  const offset = edge.labelOffset || { x: 0, y: 0 };
+  if (EDGE_DEFS.length <= 12) {
+    return {
+      x: (a.x + b.x) / 2 + offset.x,
+      y: (a.y + b.y) / 2 + offset.y
+    };
+  }
+
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const side = edge.labelSide || 1;
+  const lift = edge.labelLift || 20;
+  const t = edge.v === SOURCE ? 0.62 : edge.w === SINK ? 0.42 : 0.5;
+  return {
+    x: a.x + dx * t + nx * lift * side + offset.x,
+    y: a.y + dy * t + ny * lift * side + offset.y
+  };
 }
 
 function shortenedLine(x1, y1, x2, y2, pad) {
@@ -1031,6 +1121,10 @@ function renderCode(step) {
 
 function renderDots() {
   const dots = document.getElementById('dots');
+  if (steps.length > 160) {
+    dots.innerHTML = `<span class="chip ff-empty">${current + 1} / ${steps.length}</span>`;
+    return;
+  }
   dots.innerHTML = steps.map((_, idx) => `<button class="dot ${idx === current ? 'ff-dot-on' : ''}" onclick="goTo(${idx})" title="Step ${idx + 1}"></button>`).join('');
 }
 
