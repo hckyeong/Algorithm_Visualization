@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AVL / 균형 이진 탐색 트리</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:7px}
+.sub{color:#9a9a9a;font-size:12px;line-height:1.6;margin-bottom:10px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:58px;line-height:1.65;padding:8px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#step-code{margin-top:6px;background:#1e1e1e;border:1px solid #3e3e42;border-left:3px solid #dcdcaa;border-radius:0 4px 4px 0;overflow:hidden}
+.step-code-label{padding:4px 10px;border-bottom:1px solid #3e3e42;color:#858585;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+#step-code-lines{height:92px;overflow:auto;padding:4px 0}
+.step-code-row{display:flex;min-height:21px}
+.step-code-line{width:44px;text-align:right;padding:3px 10px 3px 0;color:#666;font-size:11px;flex-shrink:0}
+.step-code-text{position:relative;flex:1;padding:3px 10px 3px calc(var(--indent,0) * 18px + 10px);font-size:12px;line-height:1.45;color:#d4d4d4;white-space:pre;overflow-x:auto}
+.step-code-text::before{content:"";position:absolute;left:10px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.1) 13px 14px,transparent 14px 18px);pointer-events:none}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 12px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:12px;height:12px;border-radius:50%;border:1.5px solid}
+#main-content{display:grid;grid-template-columns:minmax(500px,1.1fr) minmax(380px,.9fr);grid-template-areas:"tree state" "output output" "code code";gap:14px;align-items:stretch}
+.panel{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:10px 12px;min-width:0}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#tree-panel{grid-area:tree;display:flex;flex-direction:column;min-height:470px}
+#state-panel{grid-area:state;display:flex;flex-direction:column;gap:8px;min-height:470px}
+#output-panel{grid-area:output}
+#code-panel{grid-area:code;background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden}
+#tree-svg{width:100%;height:390px;display:block;background:#1f1f1f;border:1px solid #343434;border-radius:6px}
+.tree-note,.state-note,.output-note{font-size:11px;color:#858585;line-height:1.55;margin-top:8px}
+.edge{stroke:#56565b;stroke-width:2}
+.edge.avl-path{stroke:#569cd6;stroke-width:3}
+.edge.avl-rotate{stroke:#dcdcaa;stroke-width:4}
+.node circle{fill:#2d2d30;stroke:#686870;stroke-width:2}
+.node.avl-path circle{fill:rgba(86,156,214,.13);stroke:#569cd6}
+.node.avl-focus circle{fill:rgba(206,145,120,.18);stroke:#ce9178;stroke-width:4}
+.node.avl-new circle{fill:rgba(78,201,176,.14);stroke:#4ec9b0;stroke-width:3}
+.node.avl-imbalance circle{fill:rgba(244,71,71,.13);stroke:#f44747;stroke-width:4}
+.node.avl-rotate circle{fill:rgba(220,220,170,.12);stroke:#dcdcaa;stroke-width:4}
+.node.avl-removed circle{fill:rgba(244,71,71,.16);stroke:#f44747;stroke-dasharray:4 3}
+.node-key{fill:#f5f5f5;font-size:15px;font-weight:800;text-anchor:middle;dominant-baseline:middle}
+.node-meta{fill:#9a9a9a;font-size:9px;text-anchor:middle}
+.metric-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.metric-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:62px}
+.metric-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.metric-value{font-size:17px;font-weight:700;color:#dcdcaa;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip-row{display:flex;gap:5px;flex-wrap:wrap;min-height:30px;align-items:center}
+.chip{border:1px solid #3e3e42;background:#252526;border-radius:4px;padding:4px 8px;font-size:12px;color:#d4d4d4;white-space:nowrap}
+.chip.empty{color:#555;border-color:#343434;background:#1f1f1f}
+.chip.path{border-color:#569cd6;color:#d9ecff;background:rgba(86,156,214,.11)}
+.chip.rot{border-color:#dcdcaa;color:#fff4b0;background:rgba(220,220,170,.09)}
+.chip.bad{border-color:#f44747;color:#ffc0c0;background:rgba(244,71,71,.1)}
+.chip.ok{border-color:#4ec9b0;color:#b8f5e6;background:rgba(78,201,176,.1)}
+.op-list{display:grid;grid-template-columns:repeat(9,minmax(32px,1fr));gap:5px}
+.op-token{min-height:30px;border:1px solid #3e3e42;border-radius:5px;background:#1f1f1f;color:#d4d4d4;display:flex;align-items:center;justify-content:center;font-weight:800}
+.op-token.done{border-color:#4ec9b0;color:#4ec9b0;background:rgba(78,201,176,.1)}
+.op-token.active{border-color:#ce9178;color:#ffe0b0;background:rgba(206,145,120,.16)}
+.op-token.remove{border-color:#f44747;color:#ffb8b8;background:rgba(244,71,71,.08)}
+.height-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;max-height:138px;overflow:auto}
+.hcell{border:1px solid #343434;border-radius:5px;background:#1f1f1f;padding:5px 6px;font-size:11px;line-height:1.35}
+.hcell b{color:#dcdcaa}
+#output-lines{height:190px;overflow:auto;background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:6px 0}
+.output-row{display:flex;min-height:22px;line-height:22px}
+.output-row.new{background:rgba(220,220,170,.08);border-left:2px solid #dcdcaa}
+.output-line-no{width:38px;text-align:right;padding-right:10px;color:#555;font-size:11px;flex-shrink:0}
+.output-text{flex:1;color:#d4d4d4;font-size:12px;white-space:pre}
+.output-empty{color:#555;font-size:12px;padding:3px 10px}
+.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0;max-height:600px;overflow:auto}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.07);border-left-color:#dcdcaa}
+.lnum{width:44px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;min-width:900px}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}.str{color:#ce9178}
+#nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 18px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.35;cursor:default}
+#progress{color:#858585;min-width:120px;text-align:center}
+@media (max-width:1080px){#main-content{display:flex;flex-direction:column}#tree-panel,#state-panel{min-height:auto}.metric-row{grid-template-columns:1fr}#tree-svg{height:360px}.height-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){body{padding:12px}#step-desc{min-height:86px}.op-list{grid-template-columns:repeat(5,minmax(32px,1fr))}.height-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.nbtn{padding:7px 8px;flex:1 1 0;min-width:0}#tree-svg{height:320px}.lcode{min-width:760px}}
+</style>
+</head>
+<body>
+<h1>AVL / 균형 이진 탐색 트리</h1>
+<p class="sub">제공된 C++ 코드의 `Insert`, `Remove`, `Balance`, `RotateLeft`, `RotateRight` 흐름을 단계별로 시각화합니다. 예제 입력은 삽입 `{9,8,7,6,5,4,3,2,1}`과 삭제 `{5,4,7,8,9}`입니다.</p>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="step-code">
+  <div class="step-code-label">현재 실행 코드 / Current code</div>
+  <div id="step-code-lines"></div>
+</div>
+<div id="legend">
+  <div class="leg"><span class="leg-c" style="border-color:#569cd6;background:rgba(86,156,214,.13)"></span>탐색 경로</div>
+  <div class="leg"><span class="leg-c" style="border-color:#ce9178;background:rgba(206,145,120,.18)"></span>현재 노드</div>
+  <div class="leg"><span class="leg-c" style="border-color:#f44747;background:rgba(244,71,71,.13)"></span>불균형</div>
+  <div class="leg"><span class="leg-c" style="border-color:#dcdcaa;background:rgba(220,220,170,.12)"></span>회전</div>
+  <div class="leg"><span class="leg-c" style="border-color:#4ec9b0;background:rgba(78,201,176,.14)"></span>삽입/확정</div>
+</div>
+
+<div id="main-content">
+  <section class="panel" id="tree-panel">
+    <div class="slabel">AVL Tree</div>
+    <svg id="tree-svg" viewBox="0 0 760 390" role="img" aria-label="AVL tree visualization"></svg>
+    <div class="tree-note">각 노드는 `key + value`와 함께 `h`(높이), `b`(balance = left height - right height)를 표시합니다. balance가 -1, 0, 1 범위를 벗어나면 회전이 필요합니다.</div>
+  </section>
+
+  <aside class="panel" id="state-panel">
+    <div class="slabel">AVL State</div>
+    <div class="metric-row">
+      <div class="metric-card"><div class="metric-name">Operation</div><div class="metric-value" id="op-value">-</div></div>
+      <div class="metric-card"><div class="metric-name">Focus</div><div class="metric-value" id="focus-value">-</div></div>
+      <div class="metric-card"><div class="metric-name">Root / Height</div><div class="metric-value" id="root-value">-</div></div>
+      <div class="metric-card"><div class="metric-name">Rotation</div><div class="metric-value" id="rotation-value">-</div></div>
+    </div>
+    <div class="panel" style="padding:8px;background:#1e1e1e">
+      <div class="slabel">Insert Sequence</div>
+      <div class="op-list" id="insert-list"></div>
+    </div>
+    <div class="panel" style="padding:8px;background:#1e1e1e">
+      <div class="slabel">Remove Sequence</div>
+      <div class="op-list" id="remove-list"></div>
+    </div>
+    <div class="panel" style="padding:8px;background:#1e1e1e">
+      <div class="slabel">Path / Balance Check</div>
+      <div class="chip-row" id="path-row"></div>
+    </div>
+    <div class="panel" style="padding:8px;background:#1e1e1e;flex:1 1 auto">
+      <div class="slabel">Node Height / Balance</div>
+      <div class="height-grid" id="height-grid"></div>
+    </div>
+    <div class="state-note">삽입과 삭제는 먼저 BST 규칙으로 위치를 찾은 뒤, 재귀가 되돌아오면서 각 조상 노드의 balance를 검사하고 필요한 회전을 수행합니다.</div>
+  </aside>
+
+  <section class="panel" id="output-panel">
+    <div class="slabel">cout 출력 결과</div>
+    <div id="output-lines"></div>
+    <div class="output-note">`Print2D()`는 왼쪽의 트리 그림으로 대체해서 보여주고, `Inorder()`, `RecurGet()`, `Remove` 출력은 이 패널에 누적합니다.</div>
+  </section>
+
+  <section id="code-panel">
+    <div class="code-title">AVL&lt;K, V&gt; 핵심 코드</div>
+    <div id="code-body"></div>
+  </section>
+</div>
+
+<div id="nav">
+  <button class="nbtn" id="first">처음</button>
+  <button class="nbtn" id="prev">← 이전</button>
+  <button class="nbtn" id="play">재생</button>
+  <span id="progress"></span>
+  <button class="nbtn" id="next">다음 →</button>
+  <button class="nbtn" id="last">끝</button>
+</div>
+
+<script>
+const INSERT_KEYS = [9,8,7,6,5,4,3,2,1];
+const REMOVE_KEYS = [5,4,7,8,9];
+const GET_KEYS = [5,3,7,1,4];
+
+const CODE = [
+  {n:1,t:"int Height(Node* node)"},
+  {n:2,t:"{"},
+  {n:3,t:"    return Base::Height(node);"},
+  {n:4,t:"}"},
+  {n:6,t:"int Balance(Node* node)"},
+  {n:7,t:"{"},
+  {n:8,t:"    if (node)"},
+  {n:9,t:"        return Base::Height(node->left) - Base::Height(node->right);"},
+  {n:10,t:"    else return 0;"},
+  {n:11,t:"}"},
+  {n:13,t:"Node* RotateLeft(Node* parent)"},
+  {n:14,t:"{"},
+  {n:15,t:"    Node* child = parent->right;"},
+  {n:16,t:"    parent->right = child->left;"},
+  {n:17,t:"    child->left = parent;"},
+  {n:18,t:"    return child;"},
+  {n:19,t:"}"},
+  {n:21,t:"Node* RotateRight(Node* parent)"},
+  {n:22,t:"{"},
+  {n:23,t:"    Node* child = parent->left;"},
+  {n:24,t:"    parent->left = child->right;"},
+  {n:25,t:"    child->right = parent;"},
+  {n:26,t:"    return child;"},
+  {n:27,t:"}"},
+  {n:29,t:"void Insert(const Item& item)"},
+  {n:30,t:"{"},
+  {n:31,t:"    root_ = Insert(root_, item);"},
+  {n:32,t:"}"},
+  {n:34,t:"Node* Insert(Node* node, const Item& item)"},
+  {n:35,t:"{"},
+  {n:36,t:"    if (!node) return new Node{ item, nullptr, nullptr };"},
+  {n:38,t:"    if (key < node->item.key)"},
+  {n:39,t:"        node->left = Insert(node->left, item);"},
+  {n:40,t:"    else if (key > node->item.key)"},
+  {n:41,t:"        node->right = Insert(node->right, item);"},
+  {n:43,t:"    int balance = Balance(node);"},
+  {n:46,t:"    if (balance > 1 && Balance(node->left) >= 0) return RotateRight(node);"},
+  {n:49,t:"    if (balance < -1 && Balance(node->right) <= 0) return RotateLeft(node);"},
+  {n:52,t:"    if (balance > 1 && Balance(node->left) < 0)"},
+  {n:53,t:"    { node->left = RotateLeft(node->left); return RotateRight(node); }"},
+  {n:56,t:"    if (balance < -1 && Balance(node->right) > 0)"},
+  {n:57,t:"    { node->right = RotateRight(node->right); return RotateLeft(node); }"},
+  {n:59,t:"    return node;"},
+  {n:60,t:"}"},
+  {n:62,t:"Node* MinKeyNode(Node* node)"},
+  {n:63,t:"{"},
+  {n:64,t:"    assert(node);"},
+  {n:65,t:"    while (node->left) node = node->left;"},
+  {n:66,t:"    return node;"},
+  {n:67,t:"}"},
+  {n:69,t:"void Remove(const K& key)"},
+  {n:70,t:"{"},
+  {n:71,t:"    cout << \"Remove \" << key << endl;"},
+  {n:72,t:"    root_ = Remove(root_, key);"},
+  {n:73,t:"}"},
+  {n:75,t:"Node* Remove(Node* node, const K& key)"},
+  {n:76,t:"{"},
+  {n:77,t:"    if (!node) return node;"},
+  {n:79,t:"    if (key < node->item.key) node->left = Remove(node->left, key);"},
+  {n:80,t:"    else if (key > node->item.key) node->right = Remove(node->right, key);"},
+  {n:81,t:"    else"},
+  {n:82,t:"    {"},
+  {n:83,t:"        if (!node->left) { Node* temp = node->right; delete node; return temp; }"},
+  {n:84,t:"        else if (!node->right) { Node* temp = node->left; delete node; return temp; }"},
+  {n:86,t:"        Node* temp = MinKeyNode(node->right);"},
+  {n:87,t:"        node->item = temp->item;"},
+  {n:88,t:"        node->right = Remove(node->right, temp->item.key);"},
+  {n:89,t:"    }"},
+  {n:92,t:"    int balance = Balance(node);"},
+  {n:94,t:"    if (balance > 1 && Balance(node->left) >= 0) return RotateRight(node);"},
+  {n:96,t:"    if (balance < -1 && Balance(node->right) <= 0) return RotateLeft(node);"},
+  {n:98,t:"    if (balance > 1 && Balance(node->left) < 0)"},
+  {n:99,t:"    { node->left = RotateLeft(node->left); return RotateRight(node); }"},
+  {n:101,t:"    if (balance < -1 && Balance(node->right) > 0)"},
+  {n:102,t:"    { node->right = RotateRight(node->right); return RotateLeft(node); }"},
+  {n:104,t:"    return node;"},
+  {n:105,t:"}"},
+  {n:107,t:"for (int i : { 9, 8, 7, 6, 5, 4, 3, 2, 1 }) bst.Insert(Item{ i, char('A' + i) });"},
+  {n:108,t:"bst.Inorder();"},
+  {n:109,t:"cout << bst.RecurGet(5)->value << endl;"},
+  {n:110,t:"for (int i : {5, 4, 7, 8, 9}) { bst.Remove(i); bst.Print2D(); }"}
+];
+
+const LINE = {
+  insertCall:[29,31,107],
+  insertLeaf:[36],
+  goLeft:[38,39],
+  goRight:[40,41],
+  balanceInsert:[43],
+  rr:[49,13,15,16,17,18],
+  ll:[46,21,23,24,25,26],
+  lr:[52,53,13,21],
+  rl:[56,57,21,13],
+  inorder:[108],
+  get:[109],
+  removeCall:[69,71,72,110],
+  removeLeft:[79],
+  removeRight:[80],
+  removeFound:[81,82],
+  removeLeaf:[83,84],
+  min:[62,65,86,87,88],
+  balanceRemove:[92],
+  removeLL:[94,21,23,24,25,26],
+  removeRR:[96,13,15,16,17,18],
+  removeLR:[98,99,13,21],
+  removeRL:[101,102,21,13]
+};
+
+let root = null;
+let nextId = 1;
+let output = [];
+let steps = [];
+let current = 0;
+let timer = null;
+
+function valueOf(key){ return String.fromCharCode("A".charCodeAt(0) + key); }
+function height(node){ return node ? 1 + Math.max(height(node.left), height(node.right)) : 0; }
+function balance(node){ return node ? height(node.left) - height(node.right) : 0; }
+function clone(node){
+  if(!node) return null;
+  return {key:node.key,value:node.value,id:node.id,left:clone(node.left),right:clone(node.right)};
+}
+function makeNode(key){ return {key,value:valueOf(key),id:nextId++,left:null,right:null}; }
+function findNode(key, node=root){
+  while(node){
+    if(key < node.key) node = node.left;
+    else if(key > node.key) node = node.right;
+    else return node;
+  }
+  return null;
+}
+function findParent(key){
+  let parent = null;
+  let node = root;
+  while(node && node.key !== key){
+    parent = node;
+    node = key < node.key ? node.left : node.right;
+  }
+  return {parent,node};
+}
+function replaceChild(parent, oldNode, newNode){
+  if(!parent) root = newNode;
+  else if(parent.left === oldNode) parent.left = newNode;
+  else parent.right = newNode;
+}
+function rotateLeftAt(key){
+  const {parent,node} = findParent(key);
+  const child = node.right;
+  node.right = child.left;
+  child.left = node;
+  replaceChild(parent, node, child);
+  return child;
+}
+function rotateRightAt(key){
+  const {parent,node} = findParent(key);
+  const child = node.left;
+  node.left = child.right;
+  child.right = node;
+  replaceChild(parent, node, child);
+  return child;
+}
+function pathToKey(key){
+  const path = [];
+  let node = root;
+  while(node){
+    path.push(node.key);
+    if(key < node.key) node = node.left;
+    else if(key > node.key) node = node.right;
+    else break;
+  }
+  return path;
+}
+function allNodes(node=root, arr=[]){
+  if(!node) return arr;
+  allNodes(node.left, arr);
+  arr.push(node);
+  allNodes(node.right, arr);
+  return arr;
+}
+function inorder(node=root, arr=[]){
+  if(!node) return arr;
+  inorder(node.left, arr);
+  arr.push(node.key);
+  inorder(node.right, arr);
+  return arr;
+}
+function addStep(desc, lines, extra={}){
+  steps.push(Object.assign({
+    root: clone(root),
+    output: output.slice(),
+    desc,
+    lines,
+    phase:"기타",
+    opKey:null,
+    focus:null,
+    path:[],
+    rotation:"-",
+    rotateKeys:[],
+    imbalance:null,
+    removed:null,
+    newOutput:false,
+    insertedDone: insertedKeys.slice(),
+    removedDone: removedKeys.slice()
+  }, extra));
+}
+function addOutput(line, desc, lines, extra={}){
+  output.push(line);
+  addStep(desc, lines, Object.assign({newOutput:true}, extra));
+}
+
+let insertedKeys = [];
+let removedKeys = [];
+
+function bstInsert(key){
+  if(!root){
+    root = makeNode(key);
+    return [key];
+  }
+  let node = root;
+  const path = [];
+  while(node){
+    path.push(node.key);
+    if(key < node.key){
+      if(!node.left){ node.left = makeNode(key); path.push(key); return path; }
+      node = node.left;
+    }else if(key > node.key){
+      if(!node.right){ node.right = makeNode(key); path.push(key); return path; }
+      node = node.right;
+    }else{
+      node.value = valueOf(key);
+      return path;
+    }
+  }
+  return path;
+}
+function rebalancePath(path, isRemove=false){
+  const ancestors = [...path].reverse();
+  for(const key of ancestors){
+    const node = findNode(key);
+    if(!node) continue;
+    const b = balance(node);
+    addStep(`Balance(${key}) = Height(left) - Height(right) = ${b} 입니다. ${Math.abs(b) <= 1 ? "회전 없이 유지합니다." : "균형 범위를 벗어나 회전이 필요합니다."}`,
+      isRemove ? LINE.balanceRemove : LINE.balanceInsert,
+      {phase:isRemove?"삭제 균형 검사":"삽입 균형 검사",focus:key,path,imbalance:Math.abs(b)>1?key:null});
+    if(b > 1){
+      const childBalance = balance(node.left);
+      if(childBalance >= 0){
+        addStep(`LL 상태입니다. parent ${key}와 왼쪽 자식 ${node.left.key}가 모두 왼쪽으로 무거우므로 RotateRight(${key})를 실행합니다.`,
+          isRemove ? LINE.removeLL : LINE.ll,
+          {phase:"Right Rotation",focus:key,path,rotation:"LL → Right",rotateKeys:[key,node.left.key],imbalance:key});
+        const newRoot = rotateRightAt(key);
+        addStep(`RotateRight 결과 ${newRoot.key}가 이 서브트리의 새 루트가 됩니다.`,
+          isRemove ? LINE.removeLL : LINE.ll,
+          {phase:"Right Rotation",focus:newRoot.key,path:pathToKey(newRoot.key),rotation:"LL → Right",rotateKeys:[newRoot.key,key]});
+      }else{
+        addStep(`LR 상태입니다. 먼저 왼쪽 자식 ${node.left.key}에 RotateLeft를 적용한 뒤 parent ${key}에 RotateRight를 적용합니다.`,
+          isRemove ? LINE.removeLR : LINE.lr,
+          {phase:"Left-Right Rotation",focus:key,path,rotation:"LR",rotateKeys:[key,node.left.key],imbalance:key});
+        rotateLeftAt(node.left.key);
+        rotateRightAt(key);
+        addStep("Left-Right 이중 회전이 끝나 서브트리 높이 차이가 다시 허용 범위로 들어옵니다.",
+          isRemove ? LINE.removeLR : LINE.lr,
+          {phase:"Left-Right Rotation",focus:key,path,rotation:"LR",rotateKeys:path});
+      }
+    }else if(b < -1){
+      const childBalance = balance(node.right);
+      if(childBalance <= 0){
+        addStep(`RR 상태입니다. parent ${key}와 오른쪽 자식 ${node.right.key}가 모두 오른쪽으로 무거우므로 RotateLeft(${key})를 실행합니다.`,
+          isRemove ? LINE.removeRR : LINE.rr,
+          {phase:"Left Rotation",focus:key,path,rotation:"RR → Left",rotateKeys:[key,node.right.key],imbalance:key});
+        const newRoot = rotateLeftAt(key);
+        addStep(`RotateLeft 결과 ${newRoot.key}가 이 서브트리의 새 루트가 됩니다.`,
+          isRemove ? LINE.removeRR : LINE.rr,
+          {phase:"Left Rotation",focus:newRoot.key,path:pathToKey(newRoot.key),rotation:"RR → Left",rotateKeys:[newRoot.key,key]});
+      }else{
+        addStep(`RL 상태입니다. 먼저 오른쪽 자식 ${node.right.key}에 RotateRight를 적용한 뒤 parent ${key}에 RotateLeft를 적용합니다.`,
+          isRemove ? LINE.removeRL : LINE.rl,
+          {phase:"Right-Left Rotation",focus:key,path,rotation:"RL",rotateKeys:[key,node.right.key],imbalance:key});
+        rotateRightAt(node.right.key);
+        rotateLeftAt(key);
+        addStep("Right-Left 이중 회전이 끝나 서브트리 높이 차이가 다시 허용 범위로 들어옵니다.",
+          isRemove ? LINE.removeRL : LINE.rl,
+          {phase:"Right-Left Rotation",focus:key,path,rotation:"RL",rotateKeys:path});
+      }
+    }
+  }
+}
+function insertKey(key){
+  const beforePath = pathToKey(key);
+  addStep(`Insert(Item{ ${key}, '${valueOf(key)}' })를 호출합니다. BST 규칙으로 삽입 위치를 찾습니다.`,
+    LINE.insertCall,
+    {phase:"삽입",opKey:key,focus:beforePath.at(-1) ?? null,path:beforePath});
+  if(beforePath.length){
+    const last = beforePath.at(-1);
+    addStep(`${key}는 ${last}와 비교한 뒤 ${key < last ? "왼쪽" : "오른쪽"} 자식 방향으로 내려갑니다.`,
+      key < last ? LINE.goLeft : LINE.goRight,
+      {phase:"삽입 경로",opKey:key,focus:last,path:beforePath});
+  }
+  const path = bstInsert(key);
+  addStep(`빈 위치에 새 Node{ ${key}${valueOf(key)} }를 생성합니다.`,
+    LINE.insertLeaf,
+    {phase:"노드 삽입",opKey:key,focus:key,path,rotateKeys:[key]});
+  rebalancePath(path.slice(0,-1), false);
+  insertedKeys.push(key);
+  addStep(`삽입 ${key} 완료 후 Print2D() 결과를 왼쪽 트리로 표시합니다. 현재 Height = ${height(root)}입니다.`,
+    LINE.insertCall,
+    {phase:"삽입 완료",opKey:key,focus:key,path:pathToKey(key),rotateKeys:[key],insertedDone:insertedKeys.slice()});
+}
+function removePhysical(key){
+  const path = pathToKey(key);
+  const {parent,node} = findParent(key);
+  if(!node) return {path, deleted:null};
+  if(!node.left || !node.right){
+    const child = node.left || node.right;
+    replaceChild(parent, node, child);
+    return {path:path.slice(0,-1), deleted:key};
+  }
+  let succParent = node;
+  let succ = node.right;
+  const succPath = path.slice();
+  succPath.push(succ.key);
+  while(succ.left){
+    succParent = succ;
+    succ = succ.left;
+    succPath.push(succ.key);
+  }
+  node.key = succ.key;
+  node.value = succ.value;
+  if(succParent.left === succ) succParent.left = succ.right;
+  else succParent.right = succ.right;
+  return {path:succPath.slice(0,-1), deleted:key};
+}
+function removeKey(key){
+  addOutput(`Remove ${key}`, `Remove(${key})가 호출되어 먼저 "Remove ${key}"를 출력합니다.`,
+    LINE.removeCall,
+    {phase:"삭제",opKey:key,focus:key,path:pathToKey(key)});
+  const path = pathToKey(key);
+  addStep(`${key}를 BST 규칙으로 탐색합니다. 경로는 ${path.join(" → ")} 입니다.`,
+    key < (path[0] ?? key) ? LINE.removeLeft : LINE.removeRight,
+    {phase:"삭제 경로",opKey:key,focus:key,path});
+  const node = findNode(key);
+  if(node && node.left && node.right){
+    addStep(`${key}는 자식이 둘입니다. 오른쪽 서브트리에서 MinKeyNode를 찾아 그 item으로 대체합니다.`,
+      LINE.min,
+      {phase:"삭제 대체",opKey:key,focus:key,path,rotateKeys:[key]});
+  }else{
+    addStep(`${key} 노드를 찾았습니다. 자식이 ${node && node.left || node && node.right ? "하나" : "없으므로"} BST 삭제 규칙으로 바로 연결을 바꿉니다.`,
+      LINE.removeLeaf,
+      {phase:"삭제 실행",opKey:key,focus:key,path,removed:key});
+  }
+  const result = removePhysical(key);
+  addStep(`${key} 삭제의 BST 단계가 끝났습니다. 이제 되돌아오며 조상 노드의 balance를 검사합니다.`,
+    LINE.removeFound,
+    {phase:"삭제 후 균형",opKey:key,focus:result.path.at(-1) ?? null,path:result.path,removed:key});
+  rebalancePath(result.path, true);
+  removedKeys.push(key);
+  addStep(`삭제 ${key} 완료 후 Print2D() 결과를 왼쪽 트리로 표시합니다. 현재 Height = ${height(root)}입니다.`,
+    LINE.removeCall,
+    {phase:"삭제 완료",opKey:key,focus:null,path:[],removedDone:removedKeys.slice()});
+}
+function generateSteps(){
+  root = null;
+  nextId = 1;
+  output = [];
+  steps = [];
+  insertedKeys = [];
+  removedKeys = [];
+  addStep("AVL 객체를 만들고 root_가 비어 있는 상태에서 예제 삽입을 시작합니다.",
+    [107],
+    {phase:"초기화"});
+  for(const key of INSERT_KEYS) insertKey(key);
+  addOutput(inorder().join(" "), "Inorder()는 BST 성질 때문에 key 오름차순으로 출력됩니다.",
+    LINE.inorder,
+    {phase:"중위순회",path:inorder()});
+  for(const key of GET_KEYS){
+    const found = findNode(key);
+    addOutput(found ? found.value : "-", `RecurGet(${key})로 key ${key}의 value '${found ? found.value : "-"}'를 출력합니다.`,
+      LINE.get,
+      {phase:"검색 출력",opKey:key,focus:key,path:pathToKey(key)});
+  }
+  for(const key of REMOVE_KEYS) removeKey(key);
+  addStep("main()의 모든 삽입, 순회, 검색, 삭제가 끝났습니다.",
+    [110],
+    {phase:"완료"});
+}
+
+function escapeHtml(text){
+  return String(text).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+}
+function syntax(text){
+  let out = escapeHtml(text);
+  out = out.replace(/(\/\/.*)$/g, '<span class="cm">$1</span>');
+  out = out.replace(/\b(template|typename|class|public|private|using|return|if|else|while|for|int|void|const|auto|new|delete|nullptr)\b/g, '<span class="kw">$1</span>');
+  out = out.replace(/\b(Node|Item|AVL|BinarySearchTree|Base|K|V)\b/g, '<span class="tp">$1</span>');
+  out = out.replace(/\b(Height|Balance|RotateLeft|RotateRight|Insert|Remove|MinKeyNode|Inorder|RecurGet|Print2D)\b/g, '<span class="fn">$1</span>');
+  out = out.replace(/\b(-?\d+)\b/g, '<span class="num">$1</span>');
+  return out;
+}
+function indentOf(line){
+  const match = line.match(/^ */);
+  return Math.floor((match ? match[0].length : 0) / 4);
+}
+function collectTree(node, depth=0, arr=[]){
+  if(!node) return arr;
+  collectTree(node.left, depth+1, arr);
+  arr.push({node,depth});
+  collectTree(node.right, depth+1, arr);
+  return arr;
+}
+function nodeMap(node, map={}){
+  if(!node) return map;
+  map[node.key] = node;
+  nodeMap(node.left, map);
+  nodeMap(node.right, map);
+  return map;
+}
+function edgePairs(node, arr=[]){
+  if(!node) return arr;
+  if(node.left) arr.push([node.key,node.left.key]);
+  if(node.right) arr.push([node.key,node.right.key]);
+  edgePairs(node.left, arr);
+  edgePairs(node.right, arr);
+  return arr;
+}
+function layout(rootNode){
+  const entries = collectTree(rootNode);
+  const pos = {};
+  const width = 700;
+  const gap = entries.length ? width / (entries.length + 1) : width;
+  entries.forEach((entry, i) => {
+    pos[entry.node.key] = {x:30 + gap * (i + 1), y:44 + entry.depth * 78};
+  });
+  return pos;
+}
+function svgEl(name, attrs={}){
+  const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for(const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+function renderTree(step){
+  const svg = document.getElementById("tree-svg");
+  svg.innerHTML = "";
+  if(!step.root){
+    const text = svgEl("text",{x:380,y:190,fill:"#555","text-anchor":"middle"});
+    text.textContent = "empty";
+    svg.appendChild(text);
+    return;
+  }
+  const pos = layout(step.root);
+  const map = nodeMap(step.root);
+  const pathSet = new Set(step.path || []);
+  const rotateSet = new Set(step.rotateKeys || []);
+  for(const [a,b] of edgePairs(step.root)){
+    const pa = pos[a], pb = pos[b];
+    const edge = svgEl("line",{x1:pa.x,y1:pa.y+24,x2:pb.x,y2:pb.y-24,class:"edge"});
+    if(pathSet.has(a) && pathSet.has(b)) edge.classList.add("avl-path");
+    if(rotateSet.has(a) && rotateSet.has(b)) edge.classList.add("avl-rotate");
+    svg.appendChild(edge);
+  }
+  for(const key of Object.keys(map).map(Number)){
+    const node = map[key];
+    const p = pos[key];
+    const g = svgEl("g",{class:"node"});
+    if(pathSet.has(key)) g.classList.add("avl-path");
+    if(step.focus === key) g.classList.add("avl-focus");
+    if(rotateSet.has(key)) g.classList.add("avl-rotate");
+    if(step.imbalance === key) g.classList.add("avl-imbalance");
+    if(step.removed === key) g.classList.add("avl-removed");
+    if(step.phase === "노드 삽입" && step.opKey === key) g.classList.add("avl-new");
+    g.appendChild(svgEl("circle",{cx:p.x,cy:p.y,r:25}));
+    const label = svgEl("text",{x:p.x,y:p.y-3,class:"node-key"});
+    label.textContent = `${node.key}${node.value}`;
+    const meta = svgEl("text",{x:p.x,y:p.y+16,class:"node-meta"});
+    meta.textContent = `h${height(node)} b${balance(node)}`;
+    g.appendChild(label);
+    g.appendChild(meta);
+    svg.appendChild(g);
+  }
+}
+function renderState(step){
+  document.getElementById("op-value").textContent = step.phase;
+  document.getElementById("focus-value").textContent = step.focus ?? "-";
+  document.getElementById("root-value").textContent = step.root ? `${step.root.key}${step.root.value} / ${height(step.root)}` : "-";
+  document.getElementById("rotation-value").textContent = step.rotation || "-";
+  const pathRow = document.getElementById("path-row");
+  const chips = [];
+  if(step.path && step.path.length) chips.push(...step.path.map(k => `<span class="chip path">${k}</span>`));
+  if(step.imbalance) chips.push(`<span class="chip bad">balance(${step.imbalance})</span>`);
+  if(step.rotation && step.rotation !== "-") chips.push(`<span class="chip rot">${step.rotation}</span>`);
+  pathRow.innerHTML = chips.length ? chips.join("") : '<span class="chip empty">empty</span>';
+  renderOpList("insert-list", INSERT_KEYS, step.insertedDone || [], step.opKey, false);
+  renderOpList("remove-list", REMOVE_KEYS, step.removedDone || [], step.opKey, true);
+  const grid = document.getElementById("height-grid");
+  const nodes = allNodes(step.root).sort((a,b)=>a.key-b.key);
+  grid.innerHTML = nodes.length ? nodes.map(n => `<div class="hcell"><b>${n.key}${n.value}</b><br>h=${height(n)}, b=${balance(n)}</div>`).join("") : '<div class="hcell">empty</div>';
+}
+function renderOpList(id, keys, done, active, isRemove){
+  document.getElementById(id).innerHTML = keys.map(k => {
+    let cls = "op-token";
+    if(done.includes(k)) cls += " done";
+    if(active === k) cls += isRemove ? " active remove" : " active";
+    return `<div class="${cls}">${k}</div>`;
+  }).join("");
+}
+function renderOutput(step){
+  const panel = document.getElementById("output-lines");
+  if(!step.output.length){
+    panel.innerHTML = '<div class="output-empty">empty</div>';
+    return;
+  }
+  const last = step.output.length - 1;
+  panel.innerHTML = step.output.map((line,i) => `<div class="output-row ${step.newOutput && i === last ? "new" : ""}"><div class="output-line-no">${i+1}</div><div class="output-text">${escapeHtml(line)}</div></div>`).join("");
+  panel.scrollTop = panel.scrollHeight;
+}
+function renderCodeBody(step){
+  const active = new Set(step.lines || []);
+  document.getElementById("code-body").innerHTML = CODE.map(item => {
+    const indent = indentOf(item.t);
+    return `<div class="cline ${active.has(item.n) ? "hl" : ""}"><div class="lnum">${item.n}</div><div class="lcode" style="--indent:${indent}">${syntax(item.t)}</div></div>`;
+  }).join("");
+}
+function renderStepCode(step){
+  const active = new Set(step.lines || []);
+  const selected = CODE.filter(item => active.has(item.n));
+  document.getElementById("step-code-lines").innerHTML = selected.map(item => {
+    const indent = indentOf(item.t);
+    return `<div class="step-code-row"><div class="step-code-line">${item.n}</div><div class="step-code-text" style="--indent:${indent}">${syntax(item.t)}</div></div>`;
+  }).join("");
+}
+function render(){
+  const step = steps[current];
+  document.getElementById("step-counter").textContent = `Step ${current + 1} / ${steps.length}`;
+  document.getElementById("step-desc").textContent = step.desc;
+  document.getElementById("progress").textContent = `${current + 1} / ${steps.length}`;
+  renderStepCode(step);
+  renderTree(step);
+  renderState(step);
+  renderOutput(step);
+  renderCodeBody(step);
+  document.getElementById("first").disabled = current === 0;
+  document.getElementById("prev").disabled = current === 0;
+  document.getElementById("next").disabled = current === steps.length - 1;
+  document.getElementById("last").disabled = current === steps.length - 1;
+  document.getElementById("play").textContent = timer ? "정지" : "재생";
+}
+function goTo(index){
+  current = Math.max(0, Math.min(steps.length - 1, index));
+  render();
+}
+function go(delta){ goTo(current + delta); }
+function togglePlay(){
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+    render();
+    return;
+  }
+  timer = setInterval(() => {
+    if(current >= steps.length - 1){
+      clearInterval(timer);
+      timer = null;
+      render();
+      return;
+    }
+    go(1);
+  }, 900);
+  render();
+}
+document.getElementById("first").addEventListener("click", () => goTo(0));
+document.getElementById("prev").addEventListener("click", () => go(-1));
+document.getElementById("next").addEventListener("click", () => go(1));
+document.getElementById("last").addEventListener("click", () => goTo(steps.length - 1));
+document.getElementById("play").addEventListener("click", togglePlay);
+document.addEventListener("keydown", event => {
+  if(event.key === "ArrowLeft") go(-1);
+  if(event.key === "ArrowRight") go(1);
+  if(event.key === "Home") goTo(0);
+  if(event.key === "End") goTo(steps.length - 1);
+  if(event.key === " "){ event.preventDefault(); togglePlay(); }
+});
+generateSteps();
+render();
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>

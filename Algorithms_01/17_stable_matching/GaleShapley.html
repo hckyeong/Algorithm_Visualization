@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gale-Shapley / 게일-섀플리 안정 매칭</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
+#subtitle{font-size:11px;color:#858585;margin-bottom:10px;line-height:1.55}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:62px;line-height:1.65;padding:8px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#step-code{margin-top:6px;background:#1e1e1e;border:1px solid #3e3e42;border-left:3px solid #dcdcaa;border-radius:0 4px 4px 0;overflow:hidden}
+.step-code-label{padding:4px 10px;border-bottom:1px solid #3e3e42;color:#858585;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+#step-code-lines{height:96px;overflow:auto;padding:4px 0}
+.step-code-row{display:flex;min-height:21px}
+.step-code-line{width:42px;text-align:right;padding:3px 10px 3px 0;color:#666;font-size:11px;flex-shrink:0}
+.step-code-text{position:relative;flex:1;padding:3px 10px 3px calc(var(--indent,0) * 18px + 10px);font-size:12px;line-height:1.45;color:#d4d4d4;white-space:pre;overflow-x:auto}
+.step-code-text::before{content:"";position:absolute;left:10px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.1) 13px 14px,transparent 14px 18px);pointer-events:none}
+#example-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.example-tab{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;border-radius:4px;padding:6px 12px;font-family:inherit;font-size:12px;cursor:pointer}
+.example-tab.is-on{border-color:#569cd6;background:rgba(86,156,214,.16);color:#d9ecff}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 12px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:18px;height:4px;border-radius:999px}
+#main-content{display:grid;grid-template-columns:minmax(500px,1.05fr) minmax(440px,.95fr);grid-template-areas:"graph state" "prefs prefs" "output output" "code code";gap:14px;align-items:stretch}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:10px 12px;min-width:0}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#graph-panel{grid-area:graph;display:flex;flex-direction:column;min-height:460px}
+#state-panel{grid-area:state;display:flex;flex-direction:column;gap:8px;min-height:460px}
+#prefs-panel{grid-area:prefs}
+#output-panel{grid-area:output}
+#code-panel{grid-area:code;background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden}
+#matching-svg{width:100%;height:374px;display:block;background:#1f1f1f;border:1px solid #343434;border-radius:6px}
+.graph-note,.state-note,.output-note{font-size:11px;color:#858585;line-height:1.55;margin-top:8px}
+.edge{stroke:#555;stroke-width:1.7;opacity:.55}
+.edge.gs-current{stroke:#ce9178;stroke-width:4;opacity:1}
+.edge.gs-match{stroke:#4ec9b0;stroke-width:4;opacity:1}
+.edge.gs-temp{stroke:#f44747;stroke-width:3;opacity:1;stroke-dasharray:7 5}
+.edge.gs-reject{stroke:#858585;stroke-width:3;opacity:.95;stroke-dasharray:4 4}
+.person rect{fill:#2d2d30;stroke:#686870;stroke-width:2}
+.person.gs-free rect{fill:rgba(86,156,214,.12);stroke:#569cd6}
+.person.gs-current rect{fill:rgba(206,145,120,.16);stroke:#ce9178;stroke-width:3}
+.person.gs-team rect{fill:rgba(78,201,176,.08);stroke:#4ec9b0}
+.person.gs-compare rect{fill:rgba(220,220,170,.10);stroke:#dcdcaa;stroke-width:3}
+.person.gs-reject rect{fill:rgba(244,71,71,.10);stroke:#f44747;stroke-width:3}
+.node-name{fill:#f5f5f5;font-size:18px;font-weight:800;text-anchor:middle;dominant-baseline:middle}
+.node-sub{fill:#9a9a9a;font-size:10px;text-anchor:middle}
+.metric-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.metric-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:62px}
+.metric-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.metric-value{font-size:17px;font-weight:700;color:#dcdcaa;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.var-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.var-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:78px;min-width:0}
+.var-card.gs-pointer{border-color:#569cd6;background:rgba(86,156,214,.08)}
+.var-card.gs-active{border-color:#ce9178;background:rgba(206,145,120,.10)}
+.var-card.gs-team{border-color:#4ec9b0;background:rgba(78,201,176,.08)}
+.var-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.var-value{font-size:16px;font-weight:800;color:#dcdcaa;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.var-desc{margin-top:4px;color:#9a9a9a;font-size:11px;line-height:1.35}
+.state-box{background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:8px;min-width:0}
+.queue-visual{display:flex;gap:6px;align-items:center;overflow-x:auto;padding-bottom:2px;min-height:34px}
+.queue-arrow{color:#666;font-size:12px}
+.current-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.current-card{border:1px solid #343434;border-radius:5px;background:#1f1f1f;padding:6px 7px;font-size:11px;line-height:1.35;min-width:0}
+.current-card b{color:#dcdcaa}
+.current-card span{color:#858585}
+.chip-row{display:flex;gap:5px;flex-wrap:wrap;min-height:30px;align-items:center}
+.chip{border:1px solid #3e3e42;background:#252526;border-radius:4px;padding:4px 8px;font-size:12px;color:#d4d4d4;white-space:nowrap}
+.chip.empty{color:#555;border-color:#343434;background:#1f1f1f}
+.chip.queue{border-color:#569cd6;color:#d9ecff;background:rgba(86,156,214,.12)}
+.chip.current{border-color:#ce9178;color:#ffd7aa;background:rgba(206,145,120,.13)}
+.chip.match{border-color:#4ec9b0;color:#b8f5e6;background:rgba(78,201,176,.11)}
+.chip.temp{border-color:#f44747;color:#ffc0c0;background:rgba(244,71,71,.1)}
+.chip.rank{border-color:#dcdcaa;color:#fff4b0;background:rgba(220,220,170,.08)}
+.prefs-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pref-table{overflow:auto;background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:8px}
+.pref-row{display:grid;grid-template-columns:42px 1fr 58px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #2d2d2d}
+.pref-row:last-child{border-bottom:0}
+.pref-name{font-size:15px;font-weight:800;color:#dcdcaa}
+.pref-list{display:flex;gap:5px;flex-wrap:wrap}
+.pref-token{min-width:32px;min-height:28px;border:1px solid #3e3e42;border-radius:4px;background:#252526;color:#d4d4d4;display:flex;align-items:center;justify-content:center;font-weight:800}
+.pref-token.gs-current{border-color:#ce9178;background:rgba(206,145,120,.13);color:#ffd7aa}
+.pref-token.gs-match{border-color:#4ec9b0;background:rgba(78,201,176,.11);color:#b8f5e6}
+.pref-token.gs-temp{border-color:#f44747;background:rgba(244,71,71,.1);color:#ffc0c0}
+.pref-current{font-size:11px;color:#858585;text-align:right}
+#output-lines{height:230px;overflow:auto;background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:6px 0}
+.output-row{display:flex;min-height:22px;line-height:22px}
+.output-row.new{background:rgba(220,220,170,.08);border-left:2px solid #dcdcaa}
+.output-line-no{width:38px;text-align:right;padding-right:10px;color:#555;font-size:11px;flex-shrink:0}
+.output-text{flex:1;color:#d4d4d4;font-size:12px;white-space:pre}
+.output-empty{color:#555;font-size:12px;padding:3px 10px}
+.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0;max-height:640px;overflow:auto}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.07);border-left-color:#dcdcaa}
+.lnum{width:44px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;min-width:920px}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}.str{color:#ce9178}
+#nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 18px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.35;cursor:default}
+#progress{color:#858585;min-width:120px;text-align:center}
+@media (max-width:1120px){#main-content{display:flex;flex-direction:column}#graph-panel,#state-panel{min-height:auto}.metric-row,.var-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.prefs-grid{grid-template-columns:1fr}#matching-svg{height:350px}}
+@media (max-width:640px){body{padding:12px}#step-desc{min-height:86px}.metric-row,.var-grid,.current-grid{grid-template-columns:1fr}.pref-row{grid-template-columns:34px 1fr}.pref-current{grid-column:2;text-align:left}.nbtn{padding:7px 8px;flex:1 1 0;min-width:0}#matching-svg{height:320px}.lcode{min-width:780px}}
+</style>
+</head>
+<body>
+<h1>Gale-Shapley / 게일-섀플리 안정 매칭</h1>
+<div id="subtitle">인턴이 선호도 순서대로 팀에 제안하고, 팀은 더 선호하는 인턴을 임시로 선택하는 안정 매칭 알고리듬입니다.</div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="step-code">
+  <div class="step-code-label">현재 실행 코드 / Current code</div>
+  <div id="step-code-lines"></div>
+</div>
+
+<div id="example-tabs">
+  <button class="example-tab is-on" id="tab-default" onclick="setExample('default')">기본 팀 선호도</button>
+  <button class="example-tab" id="tab-alternate" onclick="setExample('alternate')">주석 예제: Y = A C B</button>
+</div>
+
+<div id="legend">
+  <div class="leg"><span class="leg-c" style="background:#555"></span>선호 관계</div>
+  <div class="leg"><span class="leg-c" style="background:#ce9178"></span>현재 제안</div>
+  <div class="leg"><span class="leg-c" style="background:#4ec9b0"></span>서로 연결된 매칭</div>
+  <div class="leg"><span class="leg-c" style="background:#f44747"></span>한쪽만 가리키는 임시 상태 *</div>
+</div>
+
+<div id="main-content">
+  <section class="sbox" id="graph-panel">
+    <div class="slabel">Interns ↔ Teams</div>
+    <svg id="matching-svg" viewBox="0 0 760 374" role="img" aria-label="Gale-Shapley stable matching graph"></svg>
+    <div class="graph-note">실선 초록색은 인턴과 팀이 서로를 가리키는 정상 매칭입니다. 빨간 점선은 코드의 `Print()`에서 `*`가 붙는 상태처럼 인턴 쪽 포인터만 남아 있는 임시 상태입니다.</div>
+  </section>
+
+  <aside class="sbox" id="state-panel">
+    <div class="slabel">Runtime Variables / 현재 변수 상태</div>
+    <div class="var-grid" id="variable-grid"></div>
+    <div class="state-box">
+      <div class="slabel">free_interns queue</div>
+      <div class="queue-visual" id="queue-visual"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">Vertex.current 값</div>
+      <div class="current-grid" id="current-grid"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">연결 상태</div>
+      <div class="chip-row" id="link-row"></div>
+    </div>
+    <div class="state-note">`i`와 `t`는 포인터 변수입니다. `i->current`는 인턴이 지금 제안 중인 선호도 인덱스이고, `t->current`는 팀이 현재 선택한 인턴의 선호도 인덱스입니다.</div>
+  </aside>
+
+  <section class="sbox" id="prefs-panel">
+    <div class="slabel">Priority Lists / current index</div>
+    <div class="prefs-grid">
+      <div class="pref-table">
+        <div class="slabel">Interns</div>
+        <div id="intern-prefs"></div>
+      </div>
+      <div class="pref-table">
+        <div class="slabel">Teams</div>
+        <div id="team-prefs"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sbox" id="output-panel">
+    <div class="slabel">cout 출력 결과</div>
+    <div id="output-lines"></div>
+    <div class="output-note">각 반복마다 `cout << "Intern " << i->name`을 먼저 출력하고, 마지막에 `Print(interns, teams)` 결과를 누적합니다.</div>
+  </section>
+
+  <section id="code-panel">
+    <div class="code-title">Stable Matching Code</div>
+    <div id="code-body"></div>
+  </section>
+</div>
+
+<div id="nav">
+  <button class="nbtn" id="first">처음</button>
+  <button class="nbtn" id="prev">← 이전</button>
+  <button class="nbtn" id="play">재생</button>
+  <span id="progress"></span>
+  <button class="nbtn" id="next">다음 →</button>
+  <button class="nbtn" id="last">끝</button>
+</div>
+
+<script>
+const INTERN_NAMES = ["A","B","C"];
+const TEAM_NAMES = ["X","Y","Z"];
+const INTERN_PRIORITY = {
+  A:["X","Y","Z"],
+  B:["Y","X","Z"],
+  C:["Y","Z","X"]
+};
+const EXAMPLES = {
+  default: {
+    label: "기본 팀 선호도",
+    description: "teams[\"Y\"] = {\"A\", \"B\", \"C\"}",
+    finalHint: "A-X, B-Y, C-Z",
+    teams: {
+      X:["B","A","C"],
+      Y:["A","B","C"],
+      Z:["B","C","A"]
+    }
+  },
+  alternate: {
+    label: "주석 예제: Y = A C B",
+    description: "teams[\"Y\"] = {\"A\", \"C\", \"B\"}",
+    finalHint: "A-Y, B-X, C-Z",
+    teams: {
+      X:["B","A","C"],
+      Y:["A","C","B"],
+      Z:["B","C","A"]
+    }
+  }
+};
+let activeExample = "default";
+let TEAM_PRIORITY = EXAMPLES.default.teams;
+
+const CODE = [
+  {n:1,t:"struct Vertex"},
+  {n:2,t:"{"},
+  {n:3,t:"    string name = \"\";"},
+  {n:4,t:"    vector<string> priority; // 선호도 우선순위"},
+  {n:5,t:"    int current = -1;"},
+  {n:7,t:"    int Rank(string name)"},
+  {n:8,t:"    {"},
+  {n:9,t:"        for (int i = 0; i < priority.size(); i++)"},
+  {n:10,t:"            if (priority[i] == name) return i;"},
+  {n:11,t:"        assert(false);"},
+  {n:12,t:"        return -1;"},
+  {n:13,t:"    }"},
+  {n:15,t:"    string ConnectedName()"},
+  {n:16,t:"    {"},
+  {n:17,t:"        if (current == -1) return \"NA\";"},
+  {n:18,t:"        else return priority[current];"},
+  {n:19,t:"    }"},
+  {n:21,t:"    void Print()"},
+  {n:22,t:"    {"},
+  {n:23,t:"        cout << name << \"(\";"},
+  {n:24,t:"        for (auto& p : priority) cout << p;"},
+  {n:25,t:"        cout << \")\";"},
+  {n:26,t:"    }"},
+  {n:27,t:"};"},
+  {n:29,t:"void Print(map<string, Vertex>& interns, unordered_map<string, Vertex>& teams)"},
+  {n:30,t:"{"},
+  {n:31,t:"    for (auto& i : interns)"},
+  {n:32,t:"    {"},
+  {n:33,t:"        i.second.Print();"},
+  {n:34,t:"        cout << \" - \";"},
+  {n:35,t:"        if (i.second.current == -1) cout << \"No Team\";"},
+  {n:36,t:"        else {"},
+  {n:37,t:"            teams[i.second.ConnectedName()].Print();"},
+  {n:38,t:"            if (i.second.name != teams[i.second.ConnectedName()].ConnectedName())"},
+  {n:39,t:"                cout << \"*\";"},
+  {n:40,t:"        }"},
+  {n:41,t:"        cout << endl;"},
+  {n:42,t:"    }"},
+  {n:43,t:"}"},
+  {n:45,t:"map<string, Vertex> interns;"},
+  {n:46,t:"interns[\"A\"] = Vertex{ \"A\", {\"X\", \"Y\", \"Z\"} };"},
+  {n:47,t:"interns[\"B\"] = Vertex{ \"B\", {\"Y\", \"X\", \"Z\"} };"},
+  {n:48,t:"interns[\"C\"] = Vertex{ \"C\", {\"Y\", \"Z\", \"X\"} };"},
+  {n:50,t:"unordered_map<string, Vertex> teams;"},
+  {n:51,t:"teams[\"X\"] = Vertex{ \"X\", {\"B\", \"A\", \"C\"} };"},
+  {n:52,t:"teams[\"Y\"] = Vertex{ \"Y\", {\"A\", \"B\", \"C\"} };"},
+  {n:53,t:"teams[\"Z\"] = Vertex{ \"Z\", {\"B\", \"C\", \"A\"} };"},
+  {n:55,t:"queue<Vertex*> free_interns;"},
+  {n:56,t:"for (auto& i : interns)"},
+  {n:57,t:"    free_interns.push(&i.second);"},
+  {n:59,t:"while (!free_interns.empty())"},
+  {n:60,t:"{"},
+  {n:61,t:"    Vertex* i = free_interns.front(); free_interns.pop();"},
+  {n:63,t:"    cout << \"Intern \" << i->name << endl;"},
+  {n:65,t:"    i->current += 1;"},
+  {n:67,t:"    Vertex* t = &teams[i->ConnectedName()];"},
+  {n:69,t:"    if (t->current == -1)"},
+  {n:70,t:"    {"},
+  {n:71,t:"        t->current = t->Rank(i->name);"},
+  {n:72,t:"    }"},
+  {n:73,t:"    else"},
+  {n:74,t:"    {"},
+  {n:75,t:"        if (t->Rank(i->name) < t->current)"},
+  {n:76,t:"        {"},
+  {n:77,t:"            free_interns.push(&interns[t->ConnectedName()]);"},
+  {n:78,t:"            t->current = t->Rank(i->name);"},
+  {n:79,t:"        }"},
+  {n:80,t:"        else {"},
+  {n:81,t:"            free_interns.push(i);"},
+  {n:82,t:"        }"},
+  {n:83,t:"    }"},
+  {n:85,t:"    Print(interns, teams);"},
+  {n:86,t:"}"}
+];
+
+const LINE = {
+  init:[45,46,47,48,50,51,52,53],
+  queueInit:[55,56,57],
+  while:[59],
+  pop:[61],
+  coutIntern:[63],
+  advance:[65],
+  connected:[15,17,18,67],
+  freeCheck:[69],
+  acceptFree:[7,9,10,71],
+  occupied:[73,75],
+  preferNew:[75,77,78],
+  rejectNew:[80,81],
+  print:[29,31,33,34,35,37,38,39,41,85]
+};
+
+let steps = [];
+let current = 0;
+let timer = null;
+
+function initialVertices(){
+  const interns = {};
+  const teams = {};
+  for(const name of INTERN_NAMES) interns[name] = {name, priority:INTERN_PRIORITY[name], current:-1};
+  for(const name of TEAM_NAMES) teams[name] = {name, priority:TEAM_PRIORITY[name], current:-1};
+  return {interns, teams, queue:[], output:[]};
+}
+function cloneState(state){
+  const interns = {};
+  const teams = {};
+  for(const name of INTERN_NAMES) interns[name] = {...state.interns[name], priority:[...state.interns[name].priority]};
+  for(const name of TEAM_NAMES) teams[name] = {...state.teams[name], priority:[...state.teams[name].priority]};
+  return {interns, teams, queue:[...state.queue], output:[...state.output]};
+}
+function rank(vertex, name){ return vertex.priority.indexOf(name); }
+function connectedName(vertex){ return vertex.current === -1 ? "NA" : vertex.priority[vertex.current]; }
+function vertexText(vertex){ return `${vertex.name}(${vertex.priority.join("")})`; }
+function printLines(state){
+  const lines = [];
+  for(const name of INTERN_NAMES){
+    const intern = state.interns[name];
+    let line = `${vertexText(intern)} - `;
+    if(intern.current === -1) line += "No Team";
+    else{
+      const teamName = connectedName(intern);
+      const team = state.teams[teamName];
+      line += vertexText(team);
+      if(intern.name !== connectedName(team)) line += "*";
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+function stablePairs(state){
+  const pairs = [];
+  for(const internName of INTERN_NAMES){
+    const intern = state.interns[internName];
+    if(intern.current === -1) continue;
+    const teamName = connectedName(intern);
+    if(connectedName(state.teams[teamName]) === internName) pairs.push([internName, teamName]);
+  }
+  return pairs;
+}
+function tempPairs(state){
+  const pairs = [];
+  for(const internName of INTERN_NAMES){
+    const intern = state.interns[internName];
+    if(intern.current === -1) continue;
+    const teamName = connectedName(intern);
+    if(connectedName(state.teams[teamName]) !== internName) pairs.push([internName, teamName]);
+  }
+  return pairs;
+}
+function addStep(state, desc, lines, extra={}){
+  steps.push(Object.assign({
+    state:cloneState(state),
+    desc,
+    lines,
+    currentIntern:null,
+    currentTeam:null,
+    oldIntern:null,
+    rejectedIntern:null,
+    decision:"-",
+    newOutput:false
+  }, extra));
+}
+function addOutput(state, line, desc, lines, extra={}){
+  state.output.push(line);
+  addStep(state, desc, lines, Object.assign({newOutput:true}, extra));
+}
+function addPrintOutput(state, desc, extra={}){
+  const block = printLines(state);
+  state.output.push(...block);
+  addStep(state, desc, LINE.print, Object.assign({newOutput:true}, extra));
+}
+function generateSteps(){
+  steps = [];
+  const state = initialVertices();
+  const example = EXAMPLES[activeExample];
+  addStep(state, `${example.label} 예제입니다. 인턴 A, B, C와 팀 X, Y, Z의 선호도 목록을 초기화합니다. ${example.description}이고 모든 current는 -1입니다.`, LINE.init);
+  for(const name of INTERN_NAMES) state.queue.push(name);
+  addStep(state, "모든 인턴을 free_interns 큐에 넣습니다. map을 사용하므로 A, B, C 순서로 들어갑니다.", LINE.queueInit, {decision:"큐 초기화"});
+
+  while(state.queue.length){
+    addStep(state, "while (!free_interns.empty()) 조건이 참입니다. 큐 앞 인턴이 다음 제안을 진행합니다.", LINE.while);
+    const internName = state.queue[0];
+    addStep(state, `free_interns.front()는 ${internName}입니다. 곧 큐에서 꺼냅니다.`, LINE.pop, {currentIntern:internName, decision:"front"});
+    state.queue.shift();
+    addStep(state, `${internName}을 free_interns에서 pop했습니다.`, LINE.pop, {currentIntern:internName, decision:"pop"});
+    addOutput(state, `Intern ${internName}`, `"Intern ${internName}"을 출력합니다.`, LINE.coutIntern, {currentIntern:internName, decision:"cout"});
+
+    const intern = state.interns[internName];
+    intern.current += 1;
+    const teamName = connectedName(intern);
+    addStep(state, `${internName}.current를 ${intern.current}로 증가시켜 ${intern.priority[intern.current]} 팀에 제안할 차례가 됩니다.`, LINE.advance, {currentIntern:internName, currentTeam:teamName, decision:"제안 준비"});
+    const team = state.teams[teamName];
+    addStep(state, `i->ConnectedName() 결과는 ${teamName}입니다. t는 teams["${teamName}"]를 가리킵니다.`, LINE.connected, {currentIntern:internName, currentTeam:teamName, decision:"팀 선택"});
+
+    if(team.current === -1){
+      addStep(state, `${teamName} 팀의 current가 -1이므로 아직 연결된 인턴이 없습니다.`, LINE.freeCheck, {currentIntern:internName, currentTeam:teamName, decision:"팀 비어 있음"});
+      team.current = rank(team, internName);
+      addStep(state, `${teamName}.current = ${team.current}로 설정합니다. ${teamName} 팀이 ${internName}을 임시 수락합니다.`, LINE.acceptFree, {currentIntern:internName, currentTeam:teamName, decision:"수락"});
+    }else{
+      const oldIntern = connectedName(team);
+      const newRank = rank(team, internName);
+      addStep(state, `${teamName} 팀은 이미 ${oldIntern}을 선택 중입니다. ${teamName}의 선호도에서 ${internName}의 순위 ${newRank}와 현재 순위 ${team.current}를 비교합니다.`, LINE.occupied, {currentIntern:internName, currentTeam:teamName, oldIntern, decision:"선호도 비교"});
+      if(newRank < team.current){
+        state.queue.push(oldIntern);
+        addStep(state, `${teamName}은 새 인턴 ${internName}을 더 선호합니다. 기존 인턴 ${oldIntern}을 free_interns 큐에 다시 넣습니다.`, LINE.preferNew, {currentIntern:internName, currentTeam:teamName, oldIntern, rejectedIntern:oldIntern, decision:"기존 인턴 교체"});
+        team.current = newRank;
+        addStep(state, `${teamName}.current를 ${newRank}로 바꿉니다. 이제 ${teamName}은 ${internName}을 가리킵니다.`, LINE.preferNew, {currentIntern:internName, currentTeam:teamName, oldIntern, rejectedIntern:oldIntern, decision:"새 인턴 수락"});
+      }else{
+        state.queue.push(internName);
+        addStep(state, `${teamName}은 기존 인턴 ${oldIntern}을 더 선호합니다. ${internName}은 거절되어 큐 뒤로 다시 들어갑니다.`, LINE.rejectNew, {currentIntern:internName, currentTeam:teamName, oldIntern, rejectedIntern:internName, decision:"거절"});
+      }
+    }
+    addPrintOutput(state, "Print(interns, teams)를 실행하여 현재 연결 상태를 출력합니다.", {currentIntern:internName, currentTeam:teamName, decision:"Print"});
+  }
+  addStep(state, `free_interns 큐가 비었습니다. 최종 안정 매칭은 ${stablePairs(state).map(([i,t]) => `${i}-${t}`).join(", ")}입니다.`, LINE.while, {decision:"완료"});
+}
+
+function escapeHtml(text){
+  return String(text).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+}
+function syntax(text){
+  let out = escapeHtml(text);
+  out = out.replace(/(\/\/.*)$/g, '<span class="cm">$1</span>');
+  out = out.replace(/\b(struct|int|string|vector|queue|map|unordered_map|for|auto|if|else|return|while|using|namespace|void)\b/g, '<span class="kw">$1</span>');
+  out = out.replace(/\b(Vertex|interns|teams|free_interns)\b/g, '<span class="tp">$1</span>');
+  out = out.replace(/\b(Rank|ConnectedName|Print|push|pop|front|empty|size|assert)\b/g, '<span class="fn">$1</span>');
+  out = out.replace(/\b(-?\d+)\b/g, '<span class="num">$1</span>');
+  return out;
+}
+function indentOf(line){
+  const m = line.match(/^ */);
+  return Math.floor((m ? m[0].length : 0) / 4);
+}
+function svgEl(name, attrs={}){
+  const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for(const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+const POS = {
+  A:{x:110,y:76}, B:{x:110,y:187}, C:{x:110,y:298},
+  X:{x:650,y:76}, Y:{x:650,y:187}, Z:{x:650,y:298}
+};
+function pairKey(a,b){ return `${a}-${b}`; }
+function renderGraph(step){
+  const svg = document.getElementById("matching-svg");
+  svg.innerHTML = "";
+  const accepted = new Set(stablePairs(step.state).map(p => pairKey(p[0], p[1])));
+  const temp = new Set(tempPairs(step.state).map(p => pairKey(p[0], p[1])));
+  const currentEdge = step.currentIntern && step.currentTeam ? pairKey(step.currentIntern, step.currentTeam) : "";
+  const rejectedEdge = step.rejectedIntern && step.currentTeam ? pairKey(step.rejectedIntern, step.currentTeam) : "";
+
+  for(const i of INTERN_NAMES){
+    for(const t of INTERN_PRIORITY[i]){
+      const a = POS[i], b = POS[t];
+      const line = svgEl("line", {x1:a.x+58,y1:a.y,x2:b.x-58,y2:b.y,class:"edge"});
+      const key = pairKey(i,t);
+      if(accepted.has(key)) line.classList.add("gs-match");
+      if(temp.has(key)) line.classList.add("gs-temp");
+      if(key === currentEdge) line.classList.add("gs-current");
+      if(key === rejectedEdge) line.classList.add("gs-reject");
+      svg.appendChild(line);
+    }
+  }
+  for(const name of [...INTERN_NAMES, ...TEAM_NAMES]){
+    const p = POS[name];
+    const g = svgEl("g", {class:"person"});
+    if(INTERN_NAMES.includes(name) && step.state.queue.includes(name)) g.classList.add("gs-free");
+    if(name === step.currentIntern) g.classList.add("gs-current");
+    if(name === step.currentTeam) g.classList.add("gs-compare");
+    if(name === step.rejectedIntern) g.classList.add("gs-reject");
+    if(TEAM_NAMES.includes(name)) g.classList.add("gs-team");
+    g.appendChild(svgEl("rect", {x:p.x-54,y:p.y-29,width:108,height:58,rx:8}));
+    const label = svgEl("text", {x:p.x,y:p.y-5,class:"node-name"});
+    label.textContent = name;
+    const sub = svgEl("text", {x:p.x,y:p.y+17,class:"node-sub"});
+    const vertex = INTERN_NAMES.includes(name) ? step.state.interns[name] : step.state.teams[name];
+    sub.textContent = `current ${vertex.current}`;
+    g.appendChild(label);
+    g.appendChild(sub);
+    svg.appendChild(g);
+  }
+}
+function renderState(step){
+  const intern = step.currentIntern ? step.state.interns[step.currentIntern] : null;
+  const team = step.currentTeam ? step.state.teams[step.currentTeam] : null;
+  const iTarget = intern ? `&interns["${intern.name}"]` : "nullptr";
+  const tTarget = team ? `&teams["${team.name}"]` : "nullptr";
+  const iConnected = intern ? connectedName(intern) : "NA";
+  const tConnected = team ? connectedName(team) : "NA";
+  const tRankNew = intern && team ? rank(team, intern.name) : null;
+  const cards = [
+    {name:"map<string, Vertex> interns", value:`size = ${INTERN_NAMES.length}`, desc:`keys = ${INTERN_NAMES.join(", ")}`},
+    {name:"unordered_map<string, Vertex> teams", value:`size = ${TEAM_NAMES.length}`, desc:`keys = ${TEAM_NAMES.join(", ")}`},
+    {name:"queue<Vertex*> free_interns", value:`size = ${step.state.queue.length}`, desc:step.state.queue.length ? `front = ${step.state.queue[0]}` : "empty"},
+    {name:"Vertex* i", value:iTarget, desc:intern ? `i->name = ${intern.name}` : "아직 큐에서 꺼낸 인턴 없음", cls:"gs-pointer"},
+    {name:"i->current", value:intern ? intern.current : "-", desc:intern ? `i->ConnectedName() = ${iConnected}` : "제안 전", cls:"gs-active"},
+    {name:"Vertex* t", value:tTarget, desc:team ? `t->name = ${team.name}` : "아직 제안 대상 팀 없음", cls:"gs-team"},
+    {name:"t->current", value:team ? team.current : "-", desc:team ? `t->ConnectedName() = ${tConnected}` : "팀 포인터 없음", cls:"gs-team"},
+    {name:"t->Rank(i->name)", value:tRankNew ?? "-", desc:intern && team ? `${team.name} 팀에서 ${intern.name}의 선호도 인덱스` : "비교 전", cls:"gs-active"}
+  ];
+  document.getElementById("variable-grid").innerHTML = cards.map(card =>
+    `<div class="var-card ${card.cls || ""}"><div class="var-name">${escapeHtml(card.name)}</div><div class="var-value">${escapeHtml(card.value)}</div><div class="var-desc">${escapeHtml(card.desc)}</div></div>`
+  ).join("");
+  document.getElementById("queue-visual").innerHTML = step.state.queue.length
+    ? step.state.queue.map((name, index) => `${index ? '<span class="queue-arrow">→</span>' : ""}<span class="chip queue">${name}</span>`).join("")
+    : '<span class="chip empty">empty</span>';
+  document.getElementById("current-grid").innerHTML = [
+    ...INTERN_NAMES.map(name => {
+      const vertex = step.state.interns[name];
+      return `<div class="current-card"><b>interns["${name}"]</b><br><span>current = ${vertex.current}</span><br><span>ConnectedName = ${connectedName(vertex)}</span></div>`;
+    }),
+    ...TEAM_NAMES.map(name => {
+      const vertex = step.state.teams[name];
+      return `<div class="current-card"><b>teams["${name}"]</b><br><span>current = ${vertex.current}</span><br><span>ConnectedName = ${connectedName(vertex)}</span></div>`;
+    })
+  ].join("");
+  const links = [];
+  links.push(...stablePairs(step.state).map(([internName, teamName]) => `<span class="chip match">${internName} ↔ ${teamName}</span>`));
+  links.push(...tempPairs(step.state).map(([internName, teamName]) => `<span class="chip temp">${internName} → ${teamName} *</span>`));
+  if(step.rejectedIntern) links.push(`<span class="chip temp">rejected ${step.rejectedIntern}</span>`);
+  document.getElementById("link-row").innerHTML = links.length ? links.join("") : '<span class="chip empty">empty</span>';
+}
+function renderPrefs(step){
+  document.getElementById("intern-prefs").innerHTML = INTERN_NAMES.map(name => prefRow(step, name, true)).join("");
+  document.getElementById("team-prefs").innerHTML = TEAM_NAMES.map(name => prefRow(step, name, false)).join("");
+}
+function prefRow(step, name, isIntern){
+  const vertex = isIntern ? step.state.interns[name] : step.state.teams[name];
+  const tokens = vertex.priority.map((p, idx) => {
+    let cls = "pref-token";
+    if(idx === vertex.current) cls += " gs-current";
+    if(!isIntern && connectedName(vertex) === p) cls += " gs-match";
+    if(isIntern && vertex.current === idx) {
+      const team = step.state.teams[p];
+      if(connectedName(team) === name) cls += " gs-match";
+      else cls += " gs-temp";
+    }
+    return `<span class="${cls}">${p}</span>`;
+  }).join("");
+  return `<div class="pref-row"><div class="pref-name">${name}</div><div class="pref-list">${tokens}</div><div class="pref-current">cur ${vertex.current}</div></div>`;
+}
+function renderOutput(step){
+  const panel = document.getElementById("output-lines");
+  if(!step.state.output.length){
+    panel.innerHTML = '<div class="output-empty">empty</div>';
+    return;
+  }
+  const startNew = step.newOutput ? Math.max(0, step.state.output.length - 3) : step.state.output.length;
+  panel.innerHTML = step.state.output.map((line, i) => {
+    const cls = `output-row ${i >= startNew ? "new" : ""}`;
+    return `<div class="${cls}"><div class="output-line-no">${i+1}</div><div class="output-text">${escapeHtml(line)}</div></div>`;
+  }).join("");
+  panel.scrollTop = panel.scrollHeight;
+}
+function renderCodeBody(step){
+  const active = new Set(step.lines || []);
+  document.getElementById("code-body").innerHTML = CODE.map(item => {
+    const indent = indentOf(item.t);
+    return `<div class="cline ${active.has(item.n) ? "hl" : ""}"><div class="lnum">${item.n}</div><div class="lcode" style="--indent:${indent}">${syntax(item.t)}</div></div>`;
+  }).join("");
+}
+function renderStepCode(step){
+  const active = new Set(step.lines || []);
+  document.getElementById("step-code-lines").innerHTML = CODE.filter(item => active.has(item.n)).map(item => {
+    const indent = indentOf(item.t);
+    return `<div class="step-code-row"><div class="step-code-line">${item.n}</div><div class="step-code-text" style="--indent:${indent}">${syntax(item.t)}</div></div>`;
+  }).join("");
+}
+function syncCodeForExample(){
+  const yLine = CODE.find(item => item.n === 52);
+  if(yLine) {
+    const yPriority = TEAM_PRIORITY.Y.map(name => `"${name}"`).join(", ");
+    yLine.t = `teams["Y"] = Vertex{ "Y", {${yPriority}} };`;
+  }
+}
+function setExample(key){
+  activeExample = key;
+  TEAM_PRIORITY = EXAMPLES[key].teams;
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+  }
+  current = 0;
+  syncCodeForExample();
+  generateSteps();
+  render();
+}
+function render(){
+  const step = steps[current];
+  document.getElementById("step-counter").textContent = `Step ${current + 1} / ${steps.length}`;
+  document.getElementById("step-desc").textContent = step.desc;
+  document.getElementById("progress").textContent = `${current + 1} / ${steps.length}`;
+  renderStepCode(step);
+  renderGraph(step);
+  renderState(step);
+  renderPrefs(step);
+  renderOutput(step);
+  renderCodeBody(step);
+  document.getElementById("first").disabled = current === 0;
+  document.getElementById("prev").disabled = current === 0;
+  document.getElementById("next").disabled = current === steps.length - 1;
+  document.getElementById("last").disabled = current === steps.length - 1;
+  document.getElementById("play").textContent = timer ? "정지" : "재생";
+  document.querySelectorAll(".example-tab").forEach(btn => btn.classList.remove("is-on"));
+  document.getElementById(`tab-${activeExample}`).classList.add("is-on");
+}
+function goTo(index){
+  current = Math.max(0, Math.min(steps.length - 1, index));
+  render();
+}
+function go(delta){ goTo(current + delta); }
+function togglePlay(){
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+    render();
+    return;
+  }
+  timer = setInterval(() => {
+    if(current >= steps.length - 1){
+      clearInterval(timer);
+      timer = null;
+      render();
+      return;
+    }
+    go(1);
+  }, 900);
+  render();
+}
+document.getElementById("first").addEventListener("click", () => goTo(0));
+document.getElementById("prev").addEventListener("click", () => go(-1));
+document.getElementById("next").addEventListener("click", () => go(1));
+document.getElementById("last").addEventListener("click", () => goTo(steps.length - 1));
+document.getElementById("play").addEventListener("click", togglePlay);
+document.addEventListener("keydown", event => {
+  if(event.key === "ArrowLeft") go(-1);
+  if(event.key === "ArrowRight") go(1);
+  if(event.key === "Home") goTo(0);
+  if(event.key === "End") goTo(steps.length - 1);
+  if(event.key === " "){ event.preventDefault(); togglePlay(); }
+});
+setExample("default");
+</script>
+<script src="../../shared/viewer-controls.js"></script>
+</body>
+</html>
