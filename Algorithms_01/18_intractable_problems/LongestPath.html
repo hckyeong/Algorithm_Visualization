@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Longest Path / 최장 경로 백트래킹</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
+#subtitle{font-size:11px;color:#858585;line-height:1.55;margin-bottom:10px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:62px;line-height:1.65;padding:8px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#step-code{margin-top:6px;background:#1e1e1e;border:1px solid #3e3e42;border-left:3px solid #dcdcaa;border-radius:0 4px 4px 0;overflow:hidden}
+.step-code-label{padding:4px 10px;border-bottom:1px solid #3e3e42;color:#858585;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+#step-code-lines{height:96px;overflow:auto;padding:4px 0}
+.step-code-row{display:flex;min-height:21px}
+.step-code-line{width:42px;text-align:right;padding:3px 10px 3px 0;color:#666;font-size:11px;flex-shrink:0}
+.step-code-text{position:relative;flex:1;padding:3px 10px 3px calc(var(--indent,0) * 18px + 10px);font-size:12px;line-height:1.45;color:#d4d4d4;white-space:pre;overflow-x:auto}
+.step-code-text::before{content:"";position:absolute;left:10px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.1) 13px 14px,transparent 14px 18px);pointer-events:none}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 12px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:18px;height:4px;border-radius:999px}
+#main-content{display:grid;grid-template-columns:minmax(520px,1.05fr) minmax(440px,.95fr);grid-template-areas:"graph state" "adj output" "code code";gap:14px;align-items:stretch}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:10px 12px;min-width:0}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#graph-panel{grid-area:graph;display:flex;flex-direction:column;min-height:480px}
+#state-panel{grid-area:state;display:flex;flex-direction:column;gap:8px;min-height:480px}
+#adj-panel{grid-area:adj}
+#output-panel{grid-area:output}
+#code-panel{grid-area:code;background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden}
+#graph-svg{width:100%;height:390px;display:block;background:#1f1f1f;border:1px solid #343434;border-radius:6px}
+.graph-note,.state-note,.output-note{font-size:11px;color:#858585;line-height:1.55;margin-top:8px}
+.edge{stroke:#555;stroke-width:2;opacity:.52}
+.edge.path{stroke:#ce9178;stroke-width:4;opacity:1}
+.edge.current{stroke:#569cd6;stroke-width:5;opacity:1}
+.edge.skip{stroke:#f44747;stroke-width:4;opacity:.95;stroke-dasharray:7 5}
+.edge.longest{stroke:#4ec9b0;stroke-width:5;opacity:1}
+.node circle{fill:#2d2d30;stroke:#686870;stroke-width:2}
+.node.source circle{stroke:#569cd6;fill:rgba(86,156,214,.12)}
+.node.sink circle{stroke:#dcdcaa;fill:rgba(220,220,170,.10)}
+.node.path circle{stroke:#ce9178;fill:rgba(206,145,120,.13)}
+.node.visited circle{stroke:#4ec9b0;fill:rgba(78,201,176,.12)}
+.node.current circle{stroke:#ce9178;stroke-width:4;fill:rgba(206,145,120,.20)}
+.node.backtrack circle{stroke:#f44747;stroke-width:4;fill:rgba(244,71,71,.12)}
+.node.longest circle{stroke:#4ec9b0;stroke-width:4;fill:rgba(78,201,176,.18)}
+.node-label{fill:#f5f5f5;font-size:18px;font-weight:800;text-anchor:middle;dominant-baseline:middle}
+.node-sub{fill:#9a9a9a;font-size:10px;text-anchor:middle}
+.var-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.var-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:70px;min-width:0}
+.var-card.active{border-color:#ce9178;background:rgba(206,145,120,.10)}
+.var-card.current{border-color:#569cd6;background:rgba(86,156,214,.08)}
+.var-card.success{border-color:#4ec9b0;background:rgba(78,201,176,.09)}
+.var-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.var-value{font-size:16px;font-weight:800;color:#dcdcaa;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.var-desc{margin-top:4px;color:#9a9a9a;font-size:11px;line-height:1.35}
+.state-box{background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:8px;min-width:0}
+.visited-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.visited-cell{border:1px solid #343434;border-radius:5px;background:#1f1f1f;padding:6px;text-align:center;min-width:0}
+.visited-cell.true{border-color:#4ec9b0;background:rgba(78,201,176,.10)}
+.visited-cell.current{border-color:#ce9178;background:rgba(206,145,120,.13)}
+.visited-cell.backtrack{border-color:#f44747;background:rgba(244,71,71,.10)}
+.visited-index{font-size:10px;color:#858585;margin-bottom:2px}
+.visited-value{font-size:12px;font-weight:800;color:#d4d4d4}
+.chip-row{display:flex;gap:5px;flex-wrap:wrap;min-height:30px;align-items:center}
+.chip{border:1px solid #3e3e42;background:#252526;border-radius:4px;padding:4px 8px;font-size:12px;color:#d4d4d4;white-space:nowrap}
+.chip.empty{color:#555;border-color:#343434;background:#1f1f1f}
+.chip.path{border-color:#ce9178;color:#ffd7aa;background:rgba(206,145,120,.13)}
+.chip.current{border-color:#569cd6;color:#d9ecff;background:rgba(86,156,214,.12)}
+.chip.longest{border-color:#4ec9b0;color:#b8f5e6;background:rgba(78,201,176,.11)}
+.chip.skip{border-color:#f44747;color:#ffc0c0;background:rgba(244,71,71,.1)}
+#recursion-tree{max-height:320px;overflow:auto;padding:8px 4px}
+.rt-list,.rt-list ul{list-style:none;margin:0;padding-left:38px;position:relative}
+.rt-list{padding-left:0;min-width:max-content}
+.rt-list ul{margin-top:8px}
+.rt-list ul::before{content:"";position:absolute;left:18px;top:0;bottom:18px;border-left:1px solid #3e3e42}
+.rt-item{position:relative;margin:9px 0}
+.rt-item::before{content:"";position:absolute;left:-20px;top:18px;width:20px;border-top:1px solid #3e3e42}
+.rt-list > .rt-item::before{display:none}
+.rt-node{display:inline-flex;flex-direction:column;gap:2px;min-width:118px;border:1px solid #343434;border-radius:6px;background:#1f1f1f;padding:6px 8px;transition:border-color .15s,background .15s}
+.rt-node.ancestor{border-color:#569cd6;background:rgba(86,156,214,.08)}
+.rt-node.current{border-color:#ce9178;background:rgba(206,145,120,.16);box-shadow:0 0 0 1px rgba(206,145,120,.18) inset}
+.rt-node.sink{border-color:#4ec9b0}
+.rt-call{font-size:11px;font-weight:800;color:#dcdcaa}
+.rt-path{font-size:10px;color:#858585;white-space:nowrap}
+#adj-list{display:flex;flex-direction:column;gap:7px}
+.adj-row{display:grid;grid-template-columns:40px 20px 1fr;gap:6px;align-items:center}
+.adj-v{height:32px;border:1px solid #3e3e42;border-radius:5px;background:#2d2d30;display:flex;align-items:center;justify-content:center;font-weight:800;color:#dcdcaa}
+.adj-row.active .adj-v{border-color:#ce9178;background:rgba(206,145,120,.13)}
+.adj-arrow{color:#858585;text-align:center}
+.adj-neighbors{display:flex;gap:5px;flex-wrap:wrap}
+.adj-chip{min-width:32px;height:28px;border:1px solid #3e3e42;border-radius:4px;background:#1f1f1f;color:#d4d4d4;display:flex;align-items:center;justify-content:center;font-weight:800}
+.adj-chip.current{border-color:#569cd6;background:rgba(86,156,214,.14);color:#d9ecff}
+.adj-chip.skip{border-color:#f44747;background:rgba(244,71,71,.1);color:#ffc0c0}
+.adj-chip.path{border-color:#ce9178;background:rgba(206,145,120,.13);color:#ffd7aa}
+#output-lines{height:260px;overflow:auto;background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:6px 0}
+.output-row{display:flex;min-height:22px;line-height:22px}
+.output-row.new{background:rgba(220,220,170,.08);border-left:2px solid #dcdcaa}
+.output-row.found{background:rgba(78,201,176,.08);border-left:2px solid #4ec9b0}
+.output-line-no{width:38px;text-align:right;padding-right:10px;color:#555;font-size:11px;flex-shrink:0}
+.output-text{flex:1;color:#d4d4d4;font-size:12px;white-space:pre}
+.output-empty{color:#555;font-size:12px;padding:3px 10px}
+.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0;max-height:620px;overflow:auto}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.07);border-left-color:#dcdcaa}
+.lnum{width:44px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;min-width:940px}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}.str{color:#ce9178}
+#nav{position:sticky;bottom:10px;z-index:5;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 18px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.35;cursor:default}
+#progress{color:#858585;min-width:116px;text-align:center;background:rgba(30,30,30,.88);border:1px solid #343434;border-radius:4px;padding:5px 8px}
+@media (max-width:1120px){#main-content{display:flex;flex-direction:column}#graph-panel,#state-panel{min-height:auto}.var-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#graph-svg{height:360px}}
+@media (max-width:640px){body{padding:12px}#step-desc{min-height:88px}.var-grid,.visited-grid{grid-template-columns:1fr 1fr}.adj-row{grid-template-columns:34px 18px 1fr}.nbtn{padding:7px 8px;flex:1 1 0;min-width:0}#graph-svg{height:330px}.lcode{min-width:780px}}
+</style>
+</head>
+<body>
+<h1>Longest Path / 다루기 힘든 문제의 DFS 백트래킹</h1>
+<div id="subtitle">무방향 그래프에서 0번 정점부터 4번 정점까지 갈 수 있는 모든 단순 경로를 DFS로 탐색하고, 발견한 경로 중 가장 긴 경로를 `longest_path`에 저장합니다.</div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="step-code">
+  <div class="step-code-label">현재 실행 코드 / Current code</div>
+  <div id="step-code-lines"></div>
+</div>
+
+<div id="legend">
+  <div class="leg"><span class="leg-c" style="background:#555"></span>전체 그래프 T</div>
+  <div class="leg"><span class="leg-c" style="background:#ce9178"></span>현재 재귀 경로</div>
+  <div class="leg"><span class="leg-c" style="background:#569cd6"></span>비교 중인 간선</div>
+  <div class="leg"><span class="leg-c" style="background:#4ec9b0"></span>현재 최장 경로</div>
+  <div class="leg"><span class="leg-c" style="background:#f44747"></span>visited로 건너뜀 / 백트래킹</div>
+</div>
+
+<div id="main-content">
+  <section class="sbox" id="graph-panel">
+    <div class="slabel">Undirected Graph / source 0 → sink 4</div>
+    <svg id="graph-svg" viewBox="0 0 760 430" role="img" aria-label="Longest path DFS graph"></svg>
+    <div class="graph-note">이 코드는 최단 경로가 아니라 가능한 단순 경로를 모두 시도합니다. `source->visited = false`가 실행되면 다른 후보 경로에서 해당 정점을 다시 사용할 수 있습니다.</div>
+  </section>
+
+  <aside class="sbox" id="state-panel">
+    <div class="slabel">Runtime State</div>
+    <div class="var-grid" id="var-grid"></div>
+    <div class="state-box">
+      <div class="slabel">visited 배열</div>
+      <div class="visited-grid" id="visited-grid"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">현재 path</div>
+      <div class="chip-row" id="path-row"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">longest_path</div>
+      <div class="chip-row" id="longest-row"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">재귀 함수 트리 / current call</div>
+      <div id="recursion-tree"></div>
+    </div>
+    <div class="state-note">`path`는 재귀 호출마다 값으로 복사됩니다. 그래서 하위 호출에서 경로가 바뀌어도 상위 호출의 `path`는 유지됩니다.</div>
+  </aside>
+
+  <section class="sbox" id="adj-panel">
+    <div class="slabel">vector&lt;Vertex*&gt; out_neighbors</div>
+    <div id="adj-list"></div>
+    <div class="graph-note">`AddBiEdge(v, w)`는 양쪽 정점의 `out_neighbors`에 서로를 추가합니다. 행 안의 칩 순서는 실제 push_back 순서입니다.</div>
+  </section>
+
+  <section class="sbox" id="output-panel">
+    <div class="slabel">cout 출력 흐름</div>
+    <div id="output-lines"></div>
+    <div class="output-note">`cout << "Found: ";` 뒤에 `PrintPath(path)`가 바로 호출되므로 발견된 경로는 `Found: 0 -> ...` 형태로 한 줄에 출력됩니다.</div>
+  </section>
+
+  <section id="code-panel">
+    <div class="code-title">C++ Longest Path Backtracking Code</div>
+    <div id="code-body"></div>
+  </section>
+</div>
+
+<div id="nav">
+  <button class="nbtn" id="first">처음</button>
+  <button class="nbtn" id="prev">이전</button>
+  <button class="nbtn" id="play">재생</button>
+  <div id="progress"></div>
+  <button class="nbtn" id="next">다음</button>
+  <button class="nbtn" id="last">마지막</button>
+</div>
+
+<script>
+const V = 6;
+const SOURCE = 0;
+const SINK = 4;
+const BI_EDGES = [[0,2],[2,1],[2,3],[3,4],[1,5],[2,4],[3,5]];
+const POS = {
+  0:{x:92,y:78},
+  1:{x:260,y:220},
+  2:{x:670,y:78},
+  3:{x:425,y:350},
+  4:{x:645,y:350},
+  5:{x:92,y:350}
+};
+const CODE = [
+  '#include <iostream>',
+  '#include <vector>',
+  '#include <stack>',
+  'using namespace std;',
+  '',
+  'struct Vertex',
+  '{',
+  '    Vertex(int v) { value = v; }',
+  '',
+  '    int value = -1; // 변수 이름은 value지만 실질적으로는 배열에 이 정점이 저장된 인덱스입니다.',
+  '    bool visited = false;',
+  '',
+  '    vector<Vertex*> out_neighbors; // 나가는 방향의 이웃 vertex들에 대한 포인터',
+  '};',
+  '',
+  'class Graph',
+  '{',
+  'public:',
+  '    Graph(int num_vertices)',
+  '    {',
+  '        vertices.resize(num_vertices);',
+  '        for (int i = 0; i < num_vertices; i++)',
+  '            vertices[i] = new Vertex(i); //인덱스이자 value가 됨',
+  '    }',
+  '     ',
+  '    ~Graph()',
+  '    {',
+  '        for (auto* v : vertices)',
+  '            delete v;',
+  '    }',
+  '',
+  '    void AddDiEdge(int v, int w) // 단방향 간선',
+  '    {',
+  '        vertices[v]->out_neighbors.push_back(vertices[w]);',
+  '    }',
+  '',
+  '    void AddBiEdge(int v, int w) // 양방향 간선',
+  '    {',
+  '        vertices[v]->out_neighbors.push_back(vertices[w]);',
+  '        vertices[w]->out_neighbors.push_back(vertices[v]);',
+  '    }',
+  '',
+  '    void DFS(int source) //몇번 부터 시작할건지 int 정점 번호를 넣으면',
+  '    {',
+  '        cout << "Depth-first Search: ";',
+  '        for (auto* v : this->vertices)',
+  '            v->visited = false; //방문 초기화',
+  '        DFS(vertices[source]); //정점번호에 해당되는 vertex를 DFS함수에 넣음',
+  '        cout << endl;',
+  '    }',
+  '',
+  '    void DFS(Vertex* source) //깊이 우선탐색',
+  '    {',
+  '        cout << source->value << " ";',
+  '        source->visited = true;',
+  '        for (auto* w : source->out_neighbors)',
+  '            if (!w->visited)',
+  '                DFS(w);',
+  '    }',
+  '',
+  '    void DepthFirstPath(int source, int sink) //',
+  '    {',
+  '        cout << "Paths from " << vertices[source]->value',
+  '             << " to " << vertices[sink]->value << endl;',
+  '',
+  '        longest_path.clear(); //값을 초기화하는것이 아닌 size=0 으로 만드는 초기화',
+  '',
+  '        for (auto* v : this->vertices)',
+  '            v->visited = false;',
+  '',
+  '        DepthFirstPathHelper(vertices[source], vertices[sink], vector<Vertex*>());',
+  '',
+  '        cout << "Longest length : " << int(longest_path.size() - 1) << endl;',
+  '        cout << "Longest path : ";',
+  '        PrintPath(longest_path);',
+  '    }',
+  '',
+  'private:',
+  '    vector<Vertex*> vertices;',
+  '    vector<Vertex*> longest_path;',
+  '',
+  '    void DepthFirstPathHelper(Vertex* source, Vertex* sink, vector<Vertex*> path)',
+  '    {',
+  '        path.push_back(source);',
+  '        PrintPath(path);',
+  '',
+  '        if (source == sink)',
+  '        {',
+  '            cout << "Found: ";',
+  '            PrintPath(path);',
+  '            if (longest_path.size() < path.size())',
+  '                longest_path = path;',
+  '        }',
+  '',
+  '        else',
+  '        {',
+  '            source->visited = true;',
+  '',
+  '            for (auto* w : source->out_neighbors)',
+  '                if (!w->visited)',
+  '                    DepthFirstPathHelper(w, sink, path);',
+  '',
+  '            source->visited = false; //다른경로를 찾기 위해 재경로 허용(백트래킹)',
+  '        }',
+  '    }',
+  '',
+  '    void PrintPath(vector<Vertex*> path)',
+  '    {',
+  '        for (auto& v : path) {',
+  '            cout << v->value;',
+  '            if (&v != &path.back())',
+  '                cout << " -> ";',
+  '        }',
+  '        cout << endl;',
+  '    }',
+  '};',
+  '',
+  'int main()',
+  '{',
+  '    Graph g(6);',
+  '',
+  '    // 주의: 양방향 간선 (undirected graph)',
+  '    g.AddBiEdge(0, 2);',
+  '    g.AddBiEdge(2, 1);',
+  '    g.AddBiEdge(2, 3);',
+  '    g.AddBiEdge(3, 4);',
+  '    g.AddBiEdge(1, 5);',
+  '    g.AddBiEdge(2, 4);',
+  '    g.AddBiEdge(3, 5);',
+  '',
+  '    g.DepthFirstPath(0, 4);',
+  '',
+  '    return 0;',
+  '}'
+];
+const L = {
+  graphCtor:[19,21,22,23],
+  addBi:[37,39,40],
+  start:[61,63,64],
+  clear:[66],
+  reset:[68,69],
+  call:[71],
+  helperEntry:[82,83],
+  push:[84],
+  print:[85],
+  sinkIf:[87],
+  found:[89,90],
+  longestCheck:[91],
+  longestSet:[92],
+  elseBlock:[95,96,97],
+  loop:[99],
+  recurseIf:[100],
+  recurseCall:[101],
+  backtrack:[103],
+  finalLength:[73],
+  finalPath:[74,75]
+};
+let steps = [];
+let current = 0;
+let timer = null;
+
+function edgeKey(a,b){ return [Math.min(a,b), Math.max(a,b)].join("-"); }
+function directedKey(a,b){ return `${a}->${b}`; }
+function pathText(path){ return path.length ? path.join(" -> ") : "empty"; }
+function buildFullAdj(){
+  const adj = Array.from({length:V}, () => []);
+  for(const [v,w] of BI_EDGES){
+    adj[v].push(w);
+    adj[w].push(v);
+  }
+  return adj;
+}
+function buildRecursionTree(source, sink, pathArg, adj){
+  const path = [...pathArg, source];
+  const node = {source, path, children:[]};
+  if(source === sink) return node;
+  const visited = new Set(path);
+  for(const w of adj[source]){
+    if(!visited.has(w)) node.children.push(buildRecursionTree(w, sink, path, adj));
+  }
+  return node;
+}
+const RECURSION_TREE = buildRecursionTree(SOURCE, SINK, [], buildFullAdj());
+function cloneState(state){
+  return {
+    adj: state.adj.map(row => [...row]),
+    visited: [...state.visited],
+    stack: state.stack.map(frame => ({...frame, path:[...frame.path]})),
+    longest: [...state.longest],
+    outputs: state.outputs.map(row => ({...row})),
+    found: state.found.map(path => [...path])
+  };
+}
+function makeState(){
+  return {
+    adj: Array.from({length:V}, () => []),
+    visited: Array(V).fill(false),
+    stack: [],
+    longest: [],
+    outputs: [],
+    found: []
+  };
+}
+function currentPath(state){
+  if(!state.stack.length) return [];
+  return state.stack[state.stack.length - 1].path;
+}
+function addStep(state, desc, lines, extra={}){
+  steps.push(Object.assign({
+    state: cloneState(state),
+    desc,
+    lines,
+    currentNode: null,
+    currentEdge: null,
+    skippedEdge: null,
+    candidate: null,
+    backtrackNode: null,
+    newOutput: false,
+    phase: null
+  }, extra));
+}
+function addOutput(state, text, type="normal"){
+  state.outputs.push({text, type});
+}
+function addBiEdgeToState(state, v, w){
+  state.adj[v].push(w);
+  state.adj[w].push(v);
+}
+function generateSteps(){
+  steps = [];
+  const state = makeState();
+  addStep(state, "Graph g(6)이 생성되고, vertices[0]부터 vertices[5]까지 Vertex 객체가 준비됩니다. value는 실제로 정점 인덱스를 뜻합니다.", L.graphCtor);
+  BI_EDGES.forEach(([v,w]) => {
+    addBiEdgeToState(state, v, w);
+    addStep(state, `AddBiEdge(${v}, ${w})가 실행되어 그래프에 ${v}-${w} 선이 새로 나타납니다. ${v}의 out_neighbors에 ${w}, ${w}의 out_neighbors에 ${v}가 추가됩니다.`, L.addBi, {currentEdge:edgeKey(v,w), currentNode:v, candidate:w, phase:"add-edge"});
+  });
+  addOutput(state, "Paths from 0 to 4", "new");
+  addStep(state, "DepthFirstPath(0, 4)가 호출되어 source는 vertices[0], sink는 vertices[4]를 가리킵니다.", L.start, {currentNode:SOURCE, newOutput:true});
+  state.longest = [];
+  addStep(state, "longest_path.clear()가 실행되어 이전 결과를 비웁니다.", L.clear, {currentNode:SOURCE});
+  state.visited = Array(V).fill(false);
+  addStep(state, "모든 정점의 visited를 false로 초기화합니다.", L.reset, {currentNode:SOURCE});
+  addStep(state, "DepthFirstPathHelper(vertices[0], vertices[4], vector<Vertex*>())로 첫 재귀 호출을 시작합니다.", L.call, {currentNode:SOURCE});
+  helper(state, SOURCE, SINK, []);
+  addOutput(state, `Longest length : ${Math.max(0, state.longest.length - 1)}`, "new");
+  addStep(state, `탐색이 끝났습니다. longest_path.size() - 1 = ${Math.max(0, state.longest.length - 1)}이 최장 경로 길이입니다.`, L.finalLength, {newOutput:true});
+  addOutput(state, `Longest path : ${pathText(state.longest)}`, "new");
+  addStep(state, `최종 longest_path는 ${pathText(state.longest)}입니다.`, L.finalPath, {newOutput:true});
+}
+function helper(state, source, sink, pathArg){
+  const frame = {source, sink, path:[...pathArg], candidate:null};
+  state.stack.push(frame);
+  addStep(state, `DepthFirstPathHelper(${source}, ${sink}, [${pathArg.join(", ")}]) 호출 프레임이 스택에 올라갑니다.`, L.helperEntry, {currentNode:source});
+
+  frame.path = [...pathArg, source];
+  addStep(state, `path.push_back(source)로 현재 경로에 ${source}가 추가됩니다. path = ${pathText(frame.path)}.`, L.push, {currentNode:source});
+  addOutput(state, pathText(frame.path), "new");
+  addStep(state, `PrintPath(path)가 ${pathText(frame.path)}를 출력합니다.`, L.print, {currentNode:source, newOutput:true});
+
+  if(source === sink){
+    addStep(state, `source와 sink가 모두 ${sink}이므로 하나의 완전한 경로를 찾았습니다.`, L.sinkIf, {currentNode:source});
+    state.found.push([...frame.path]);
+    addOutput(state, `Found: ${pathText(frame.path)}`, "found");
+    addStep(state, `cout << "Found: " 다음 PrintPath(path)가 실행되어 Found: ${pathText(frame.path)}를 출력합니다.`, L.found, {currentNode:source, newOutput:true});
+    if(state.longest.length < frame.path.length){
+      state.longest = [...frame.path];
+      addStep(state, `현재 경로 길이 ${frame.path.length - 1}이 기존 longest_path보다 길어서 longest_path를 갱신합니다.`, L.longestSet, {currentNode:source});
+    }else{
+      addStep(state, `현재 경로 길이 ${frame.path.length - 1}은 longest_path 길이 ${state.longest.length - 1}보다 길지 않으므로 갱신하지 않습니다.`, L.longestCheck, {currentNode:source});
+    }
+    state.stack.pop();
+    addStep(state, `${source}는 sink였으므로 else 블록에 들어가지 않고 상위 호출로 돌아갑니다.`, L.sinkIf, {currentNode:source});
+    return;
+  }
+
+  state.visited[source] = true;
+  addStep(state, `${source}는 sink가 아니므로 source->visited = true로 표시합니다. 현재 경로 안에서 같은 정점을 다시 쓰지 않기 위한 표시입니다.`, L.elseBlock, {currentNode:source});
+
+  for(const w of state.adj[source]){
+    frame.candidate = w;
+    const key = edgeKey(source, w);
+    addStep(state, `${source}의 out_neighbors에서 w=${w}를 꺼내 비교합니다.`, L.loop, {currentNode:source, currentEdge:key, candidate:w});
+    if(!state.visited[w]){
+      addStep(state, `w=${w}는 아직 visited=false이므로 재귀 호출 대상입니다.`, L.recurseIf, {currentNode:source, currentEdge:key, candidate:w});
+      addStep(state, `DepthFirstPathHelper(${w}, ${sink}, path)를 호출합니다. path는 값으로 복사되어 전달됩니다.`, L.recurseCall, {currentNode:source, currentEdge:key, candidate:w});
+      helper(state, w, sink, frame.path);
+    }else{
+      addStep(state, `w=${w}는 현재 경로에서 이미 visited=true이므로 사이클을 피하기 위해 건너뜁니다.`, L.recurseIf, {currentNode:source, skippedEdge:key, candidate:w});
+    }
+  }
+  frame.candidate = null;
+  state.visited[source] = false;
+  addStep(state, `${source}의 모든 이웃을 확인했습니다. 다른 경로에서 ${source}를 다시 쓸 수 있도록 source->visited = false로 되돌립니다.`, L.backtrack, {currentNode:source, backtrackNode:source});
+  state.stack.pop();
+  addStep(state, `DepthFirstPathHelper(${source}, ${sink}, ...) 호출이 종료되어 상위 호출로 복귀합니다.`, L.backtrack, {currentNode:source, backtrackNode:source});
+}
+function pathEdges(path){
+  const set = new Set();
+  for(let i=1;i<path.length;i++) set.add(edgeKey(path[i-1], path[i]));
+  return set;
+}
+function renderGraph(step){
+  const svg = document.getElementById("graph-svg");
+  const state = step.state;
+  const activePath = currentPath(state);
+  const activeEdges = pathEdges(activePath);
+  const longestEdges = pathEdges(state.longest);
+  svg.innerHTML = "";
+  const visibleEdges = new Set();
+  state.adj.forEach((row, v) => row.forEach(w => visibleEdges.add(edgeKey(v, w))));
+  for(const [a,b] of BI_EDGES){
+    const key = edgeKey(a,b);
+    if(!visibleEdges.has(key)) continue;
+    const pa = POS[a], pb = POS[b];
+    let cls = "edge";
+    if(longestEdges.has(key)) cls += " longest";
+    if(activeEdges.has(key)) cls += " path";
+    if(step.skippedEdge === key) cls += " skip";
+    if(step.currentEdge === key && step.phase !== "add-edge") cls += " current";
+    svg.appendChild(svgEl("line", {class:cls, x1:pa.x, y1:pa.y, x2:pb.x, y2:pb.y}));
+  }
+  const activeNodes = new Set(activePath);
+  const longestNodes = new Set(state.longest);
+  for(let i=0;i<V;i++){
+    const p = POS[i];
+    let cls = "node";
+    if(i === SOURCE) cls += " source";
+    if(i === SINK) cls += " sink";
+    if(longestNodes.has(i)) cls += " longest";
+    if(activeNodes.has(i)) cls += " path";
+    if(state.visited[i]) cls += " visited";
+    if(step.currentNode === i) cls += " current";
+    if(step.backtrackNode === i) cls += " backtrack";
+    const g = svgEl("g", {class:cls});
+    g.appendChild(svgEl("circle", {cx:p.x, cy:p.y, r:28}));
+    const text = svgEl("text", {x:p.x, y:p.y - 3, class:"node-label"});
+    text.textContent = i;
+    g.appendChild(text);
+    const sub = svgEl("text", {x:p.x, y:p.y + 21, class:"node-sub"});
+    sub.textContent = state.visited[i] ? "visited" : "false";
+    g.appendChild(sub);
+    svg.appendChild(g);
+  }
+}
+function svgEl(name, attrs){
+  const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for(const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+function renderState(step){
+  const state = step.state;
+  const stackTop = state.stack[state.stack.length - 1] || null;
+  const path = currentPath(state);
+  const cards = [
+    {name:"Vertex* source", value: stackTop ? `vertices[${stackTop.source}]` : "nullptr", desc: stackTop ? `value = ${stackTop.source}` : "호출 스택 비어 있음", cls:"active"},
+    {name:"Vertex* sink", value:`vertices[${SINK}]`, desc:`value = ${SINK}`, cls:"current"},
+    {name:"auto* w", value: step.candidate ?? "-", desc: step.candidate == null ? "현재 비교 중인 이웃 없음" : `source의 이웃 ${step.candidate}`},
+    {name:"path.size()", value:path.length, desc:`path = ${pathText(path)}`},
+    {name:"longest_path.size()", value:state.longest.length, desc:`길이 = ${Math.max(0, state.longest.length - 1)}`, cls:"success"},
+    {name:"found paths", value:state.found.length, desc:"source == sink로 발견한 경로 수", cls:"success"}
+  ];
+  document.getElementById("var-grid").innerHTML = cards.map(card =>
+    `<div class="var-card ${card.cls || ""}"><div class="var-name">${esc(card.name)}</div><div class="var-value">${esc(card.value)}</div><div class="var-desc">${esc(card.desc)}</div></div>`
+  ).join("");
+  document.getElementById("visited-grid").innerHTML = state.visited.map((v, i) => {
+    let cls = "visited-cell";
+    if(v) cls += " true";
+    if(step.currentNode === i) cls += " current";
+    if(step.backtrackNode === i) cls += " backtrack";
+    return `<div class="${cls}"><div class="visited-index">${i}</div><div class="visited-value">${v ? "true" : "false"}</div></div>`;
+  }).join("");
+  document.getElementById("path-row").innerHTML = path.length
+    ? path.map(v => `<span class="chip path">${v}</span>`).join("")
+    : '<span class="chip empty">empty</span>';
+  document.getElementById("longest-row").innerHTML = state.longest.length
+    ? state.longest.map(v => `<span class="chip longest">${v}</span>`).join("")
+    : '<span class="chip empty">empty</span>';
+  renderRecursionTree(step);
+}
+function activeTreePath(step){
+  const top = step.state.stack[step.state.stack.length - 1] || null;
+  if(!top) return [];
+  if(top.path.length && top.path[top.path.length - 1] === top.source) return top.path;
+  return [...top.path, top.source];
+}
+function renderRecursionTree(step){
+  const activePath = activeTreePath(step);
+  const activeIds = new Set(activePath.map((_, i) => activePath.slice(0, i + 1).join("-")));
+  const activeId = activePath.join("-");
+  document.getElementById("recursion-tree").innerHTML = `<ul class="rt-list">${renderRecursionNode(RECURSION_TREE, activeId, activeIds)}</ul>`;
+}
+function renderRecursionNode(node, activeId, activeIds){
+  const id = node.path.join("-");
+  let cls = "rt-node";
+  if(node.source === SINK) cls += " sink";
+  if(activeIds.has(id)) cls += id === activeId ? " current" : " ancestor";
+  const children = node.children.length
+    ? `<ul>${node.children.map(child => renderRecursionNode(child, activeId, activeIds)).join("")}</ul>`
+    : "";
+  return `<li class="rt-item"><div class="${cls}"><span class="rt-call">Helper(${node.source}, ${SINK})</span><span class="rt-path">${pathText(node.path)}</span></div>${children}</li>`;
+}
+function renderAdj(step){
+  const state = step.state;
+  const stackTop = state.stack[state.stack.length - 1] || null;
+  const source = stackTop ? stackTop.source : step.currentNode;
+  document.getElementById("adj-list").innerHTML = state.adj.map((row, v) => {
+    const active = source === v;
+    const cells = row.map(w => {
+      let cls = "adj-chip";
+      const key = edgeKey(v,w);
+      if(step.currentEdge === key && active && step.candidate === w) cls += " current";
+      if(step.skippedEdge === key && active && step.candidate === w) cls += " skip";
+      if(currentPath(state).includes(v) && currentPath(state).includes(w)) cls += " path";
+      return `<span class="${cls}">${w}</span>`;
+    }).join("");
+    return `<div class="adj-row ${active ? "active" : ""}"><div class="adj-v">${v}</div><div class="adj-arrow">→</div><div class="adj-neighbors">${cells || '<span class="chip empty">empty</span>'}</div></div>`;
+  }).join("");
+}
+function renderOutput(step){
+  const panel = document.getElementById("output-lines");
+  if(!step.state.outputs.length){
+    panel.innerHTML = '<div class="output-empty">empty</div>';
+    return;
+  }
+  const startNew = step.newOutput ? Math.max(0, step.state.outputs.length - 1) : step.state.outputs.length;
+  panel.innerHTML = step.state.outputs.map((row, i) => {
+    const cls = `output-row ${i >= startNew ? "new" : ""} ${row.type === "found" ? "found" : ""}`;
+    return `<div class="${cls}"><div class="output-line-no">${i+1}</div><div class="output-text">${esc(row.text)}</div></div>`;
+  }).join("");
+  panel.scrollTop = panel.scrollHeight;
+}
+function buildCodeBody(){
+  const body = document.getElementById("code-body");
+  body.innerHTML = CODE.map((line, idx) => codeRow(line, idx, false)).join("");
+}
+function renderStepCode(step){
+  const active = new Set(step.lines);
+  const first = Math.max(1, Math.min(...step.lines) - 2);
+  const last = Math.min(CODE.length, Math.max(...step.lines) + 2);
+  const rows = [];
+  for(let lineNo=first; lineNo<=last; lineNo++){
+    rows.push(codeRow(CODE[lineNo - 1], lineNo - 1, active.has(lineNo), true));
+  }
+  document.getElementById("step-code-lines").innerHTML = rows.join("");
+}
+function renderCodeBody(step){
+  const active = new Set(step.lines);
+  document.querySelectorAll("#code-body .cline").forEach((row, idx) => {
+    row.classList.toggle("hl", active.has(idx + 1));
+  });
+}
+function codeRow(line, idx, active, small=false){
+  const indent = Math.floor((line.match(/^\s*/)[0].length) / 4);
+  const trimmed = line.trimStart();
+  const rowCls = `cline ${active ? "hl" : ""}`;
+  const textCls = small ? "step-code-text" : "lcode";
+  const noCls = small ? "step-code-line" : "lnum";
+  return `<div class="${rowCls}"><div class="${noCls}">${idx + 1}</div><div class="${textCls}" style="--indent:${indent}">${trimmed ? colorize(trimmed) : "&nbsp;"}</div></div>`;
+}
+function colorize(text){
+  return esc(text)
+    .replace(/\b(class|struct|public|private|void|int|bool|for|if|else|return|auto|true|false|new|delete)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(Vertex|Graph|vector|stack)\b/g,'<span class="tp">$1</span>')
+    .replace(/\b(AddBiEdge|DepthFirstPath|DepthFirstPathHelper|PrintPath|push_back|clear|size|resize)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(vertices|source|sink|path|longest_path|visited|out_neighbors|value|this|w|v)\b/g,'<span class="id">$1</span>')
+    .replace(/\b(\d+)\b/g,'<span class="num">$1</span>')
+    .replace(/(&quot;[^&]*&quot;)/g,'<span class="str">$1</span>');
+}
+function esc(value){
+  return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function render(){
+  const step = steps[current];
+  document.getElementById("step-counter").textContent = `Step ${current + 1} / ${steps.length}`;
+  document.getElementById("step-desc").textContent = step.desc;
+  document.getElementById("progress").textContent = `${current + 1} / ${steps.length}`;
+  renderStepCode(step);
+  renderGraph(step);
+  renderState(step);
+  renderAdj(step);
+  renderOutput(step);
+  renderCodeBody(step);
+  document.getElementById("first").disabled = current === 0;
+  document.getElementById("prev").disabled = current === 0;
+  document.getElementById("next").disabled = current === steps.length - 1;
+  document.getElementById("last").disabled = current === steps.length - 1;
+  document.getElementById("play").textContent = timer ? "일시정지" : "재생";
+}
+function go(delta){
+  current = Math.max(0, Math.min(steps.length - 1, current + delta));
+  render();
+}
+function goTo(index){
+  current = Math.max(0, Math.min(steps.length - 1, index));
+  render();
+}
+function togglePlay(){
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+    render();
+    return;
+  }
+  timer = setInterval(() => {
+    if(current >= steps.length - 1){
+      clearInterval(timer);
+      timer = null;
+      render();
+      return;
+    }
+    current += 1;
+    render();
+  }, 900);
+  render();
+}
+document.getElementById("first").addEventListener("click", () => goTo(0));
+document.getElementById("prev").addEventListener("click", () => go(-1));
+document.getElementById("next").addEventListener("click", () => go(1));
+document.getElementById("last").addEventListener("click", () => goTo(steps.length - 1));
+document.getElementById("play").addEventListener("click", togglePlay);
+document.addEventListener("keydown", event => {
+  if(event.target && ["INPUT","TEXTAREA","SELECT","BUTTON"].includes(event.target.tagName)) return;
+  if(event.key === "ArrowLeft") go(-1);
+  if(event.key === "ArrowRight") go(1);
+  if(event.key === "Home") goTo(0);
+  if(event.key === "End") goTo(steps.length - 1);
+  if(event.key === " ") {
+    event.preventDefault();
+    togglePlay();
+  }
+});
+generateSteps();
+buildCodeBody();
+render();
+</script>
+</body>
+</html>
