@@ -33,11 +33,14 @@ h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
 #code-panel{grid-area:code;background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden}
 #graph-svg{width:100%;height:390px;display:block;background:#1f1f1f;border:1px solid #343434;border-radius:6px}
 .graph-note,.state-note,.output-note{font-size:11px;color:#858585;line-height:1.55;margin-top:8px}
-.edge{stroke:#555;stroke-width:2;opacity:.52}
+.edge{stroke:#555;stroke-width:2;opacity:.52;stroke-linecap:round}
 .edge.path{stroke:#ce9178;stroke-width:4;opacity:1}
 .edge.current{stroke:#569cd6;stroke-width:5;opacity:1}
 .edge.skip{stroke:#f44747;stroke-width:4;opacity:.95;stroke-dasharray:7 5}
 .edge.longest{stroke:#4ec9b0;stroke-width:5;opacity:1}
+.edge.active-path-overlay{stroke:#c586c0;stroke-width:12;opacity:.34;pointer-events:none}
+.edge.active-path-core{stroke:#ffd166;stroke-width:3;opacity:.72;pointer-events:none}
+.path-node-halo{fill:none;stroke:#c586c0;stroke-width:8;opacity:.30;pointer-events:none}
 .node circle{fill:#2d2d30;stroke:#686870;stroke-width:2}
 .node.source circle{stroke:#569cd6;fill:rgba(86,156,214,.12)}
 .node.sink circle{stroke:#dcdcaa;fill:rgba(220,220,170,.10)}
@@ -71,6 +74,11 @@ h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
 .chip.current{border-color:#569cd6;color:#d9ecff;background:rgba(86,156,214,.12)}
 .chip.longest{border-color:#4ec9b0;color:#b8f5e6;background:rgba(78,201,176,.11)}
 .chip.skip{border-color:#f44747;color:#ffc0c0;background:rgba(244,71,71,.1)}
+.found-path-list{display:flex;flex-direction:column;gap:6px;max-height:124px;overflow:auto}
+.found-path-row{display:flex;align-items:center;gap:6px;border:1px solid #343434;background:#1f1f1f;border-radius:5px;padding:5px 6px}
+.found-path-row.latest{border-color:#4ec9b0;background:rgba(78,201,176,.09)}
+.found-path-index{min-width:24px;color:#858585;font-size:11px}
+.found-path-text{color:#d4d4d4;font-size:12px;white-space:nowrap}
 #recursion-tree{max-height:320px;overflow:auto;padding:8px 4px}
 .rt-list,.rt-list ul{list-style:none;margin:0;padding-left:38px;position:relative}
 .rt-list{padding-left:0;min-width:max-content}
@@ -131,9 +139,9 @@ h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
 
 <div id="legend">
   <div class="leg"><span class="leg-c" style="background:#555"></span>전체 그래프 T</div>
-  <div class="leg"><span class="leg-c" style="background:#ce9178"></span>현재 재귀 경로</div>
+  <div class="leg"><span class="leg-c" style="background:#c586c0"></span>현재 재귀 경로</div>
   <div class="leg"><span class="leg-c" style="background:#569cd6"></span>비교 중인 간선</div>
-  <div class="leg"><span class="leg-c" style="background:#4ec9b0"></span>현재 최장 경로</div>
+  <div class="leg"><span class="leg-c" style="background:#4ec9b0"></span>최종 longest_path</div>
   <div class="leg"><span class="leg-c" style="background:#f44747"></span>visited로 건너뜀 / 백트래킹</div>
 </div>
 
@@ -154,6 +162,10 @@ h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
     <div class="state-box">
       <div class="slabel">현재 path</div>
       <div class="chip-row" id="path-row"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">찾은 경로 목록 / found paths</div>
+      <div class="found-path-list" id="found-path-list"></div>
     </div>
     <div class="state-box">
       <div class="slabel">longest_path</div>
@@ -414,6 +426,9 @@ function currentPath(state){
   if(!state.stack.length) return [];
   return state.stack[state.stack.length - 1].path;
 }
+function graphPath(step){
+  return step.clearGraphPath ? [] : currentPath(step.state);
+}
 function addStep(state, desc, lines, extra={}){
   steps.push(Object.assign({
     state: cloneState(state),
@@ -425,6 +440,9 @@ function addStep(state, desc, lines, extra={}){
     candidate: null,
     backtrackNode: null,
     newOutput: false,
+    newFound: false,
+    clearGraphPath: false,
+    showLongestGraph: false,
     phase: null
   }, extra));
 }
@@ -452,9 +470,9 @@ function generateSteps(){
   addStep(state, "DepthFirstPathHelper(vertices[0], vertices[4], vector<Vertex*>())로 첫 재귀 호출을 시작합니다.", L.call, {currentNode:SOURCE});
   helper(state, SOURCE, SINK, []);
   addOutput(state, `Longest length : ${Math.max(0, state.longest.length - 1)}`, "new");
-  addStep(state, `탐색이 끝났습니다. longest_path.size() - 1 = ${Math.max(0, state.longest.length - 1)}이 최장 경로 길이입니다.`, L.finalLength, {newOutput:true});
+  addStep(state, `탐색이 끝났습니다. longest_path.size() - 1 = ${Math.max(0, state.longest.length - 1)}이 최장 경로 길이입니다.`, L.finalLength, {newOutput:true, showLongestGraph:true});
   addOutput(state, `Longest path : ${pathText(state.longest)}`, "new");
-  addStep(state, `최종 longest_path는 ${pathText(state.longest)}입니다.`, L.finalPath, {newOutput:true});
+  addStep(state, `최종 longest_path는 ${pathText(state.longest)}입니다.`, L.finalPath, {newOutput:true, showLongestGraph:true});
 }
 function helper(state, source, sink, pathArg){
   const frame = {source, sink, path:[...pathArg], candidate:null};
@@ -470,12 +488,12 @@ function helper(state, source, sink, pathArg){
     addStep(state, `source와 sink가 모두 ${sink}이므로 하나의 완전한 경로를 찾았습니다.`, L.sinkIf, {currentNode:source});
     state.found.push([...frame.path]);
     addOutput(state, `Found: ${pathText(frame.path)}`, "found");
-    addStep(state, `cout << "Found: " 다음 PrintPath(path)가 실행되어 Found: ${pathText(frame.path)}를 출력합니다.`, L.found, {currentNode:source, newOutput:true});
+    addStep(state, `cout << "Found: " 다음 PrintPath(path)가 실행되어 Found: ${pathText(frame.path)}를 출력합니다. 찾은 경로 목록에 저장하고 그래프의 현재 경로 하이라이트는 비웁니다.`, L.found, {currentNode:source, newOutput:true, newFound:true, clearGraphPath:true});
     if(state.longest.length < frame.path.length){
       state.longest = [...frame.path];
-      addStep(state, `현재 경로 길이 ${frame.path.length - 1}이 기존 longest_path보다 길어서 longest_path를 갱신합니다.`, L.longestSet, {currentNode:source});
+      addStep(state, `현재 경로 길이 ${frame.path.length - 1}이 기존 longest_path보다 길어서 longest_path를 갱신합니다. 발견된 경로는 목록에 남기고 그래프 경로 하이라이트는 초기화된 상태로 둡니다.`, L.longestSet, {currentNode:source, clearGraphPath:true});
     }else{
-      addStep(state, `현재 경로 길이 ${frame.path.length - 1}은 longest_path 길이 ${state.longest.length - 1}보다 길지 않으므로 갱신하지 않습니다.`, L.longestCheck, {currentNode:source});
+      addStep(state, `현재 경로 길이 ${frame.path.length - 1}은 longest_path 길이 ${state.longest.length - 1}보다 길지 않으므로 갱신하지 않습니다. 발견된 경로는 목록에 남기고 그래프 경로 하이라이트는 초기화된 상태로 둡니다.`, L.longestCheck, {currentNode:source, clearGraphPath:true});
     }
     state.stack.pop();
     addStep(state, `${source}는 sink였으므로 else 블록에 들어가지 않고 상위 호출로 돌아갑니다.`, L.sinkIf, {currentNode:source});
@@ -508,28 +526,44 @@ function pathEdges(path){
   for(let i=1;i<path.length;i++) set.add(edgeKey(path[i-1], path[i]));
   return set;
 }
+function appendEdgeLine(svg, key, cls){
+  const [a,b] = key.split("-").map(Number);
+  const pa = POS[a], pb = POS[b];
+  svg.appendChild(svgEl("line", {class:cls, x1:pa.x, y1:pa.y, x2:pb.x, y2:pb.y}));
+}
 function renderGraph(step){
   const svg = document.getElementById("graph-svg");
   const state = step.state;
-  const activePath = currentPath(state);
+  const activePath = graphPath(step);
   const activeEdges = pathEdges(activePath);
-  const longestEdges = pathEdges(state.longest);
+  const longestEdges = step.showLongestGraph ? pathEdges(state.longest) : new Set();
   svg.innerHTML = "";
   const visibleEdges = new Set();
   state.adj.forEach((row, v) => row.forEach(w => visibleEdges.add(edgeKey(v, w))));
   for(const [a,b] of BI_EDGES){
     const key = edgeKey(a,b);
     if(!visibleEdges.has(key)) continue;
-    const pa = POS[a], pb = POS[b];
     let cls = "edge";
     if(longestEdges.has(key)) cls += " longest";
-    if(activeEdges.has(key)) cls += " path";
-    if(step.skippedEdge === key) cls += " skip";
-    if(step.currentEdge === key && step.phase !== "add-edge") cls += " current";
-    svg.appendChild(svgEl("line", {class:cls, x1:pa.x, y1:pa.y, x2:pb.x, y2:pb.y}));
+    appendEdgeLine(svg, key, cls);
+  }
+  for(const key of activeEdges){
+    if(!visibleEdges.has(key)) continue;
+    appendEdgeLine(svg, key, "edge active-path-overlay");
+    appendEdgeLine(svg, key, "edge active-path-core");
+  }
+  if(step.currentEdge && step.phase !== "add-edge" && visibleEdges.has(step.currentEdge)){
+    appendEdgeLine(svg, step.currentEdge, "edge current");
+  }
+  if(step.skippedEdge && visibleEdges.has(step.skippedEdge)){
+    appendEdgeLine(svg, step.skippedEdge, "edge skip");
   }
   const activeNodes = new Set(activePath);
-  const longestNodes = new Set(state.longest);
+  const longestNodes = step.showLongestGraph ? new Set(state.longest) : new Set();
+  for(const i of activeNodes){
+    const p = POS[i];
+    svg.appendChild(svgEl("circle", {class:"path-node-halo", cx:p.x, cy:p.y, r:35}));
+  }
   for(let i=0;i<V;i++){
     const p = POS[i];
     let cls = "node";
@@ -580,6 +614,12 @@ function renderState(step){
   }).join("");
   document.getElementById("path-row").innerHTML = path.length
     ? path.map(v => `<span class="chip path">${v}</span>`).join("")
+    : '<span class="chip empty">empty</span>';
+  document.getElementById("found-path-list").innerHTML = state.found.length
+    ? state.found.map((foundPath, i) => {
+        const latest = step.newFound && i === state.found.length - 1;
+        return `<div class="found-path-row ${latest ? "latest" : ""}"><span class="found-path-index">#${i + 1}</span><span class="found-path-text">${esc(pathText(foundPath))}</span></div>`;
+      }).join("")
     : '<span class="chip empty">empty</span>';
   document.getElementById("longest-row").innerHTML = state.longest.length
     ? state.longest.map(v => `<span class="chip longest">${v}</span>`).join("")
