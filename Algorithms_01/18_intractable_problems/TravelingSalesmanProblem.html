@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Traveling Salesman Problem / 외판원 문제</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:"Consolas","Malgun Gothic","Apple SD Gothic Neo",monospace;font-size:13px;padding:16px}
+h1{font-size:15px;font-weight:400;color:#d4d4d4;margin-bottom:8px}
+#subtitle{font-size:11px;color:#858585;line-height:1.55;margin-bottom:10px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:62px;line-height:1.65;padding:8px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#step-code{margin-top:6px;background:#1e1e1e;border:1px solid #3e3e42;border-left:3px solid #dcdcaa;border-radius:0 4px 4px 0;overflow:hidden}
+.step-code-label{padding:4px 10px;border-bottom:1px solid #3e3e42;color:#858585;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+#step-code-lines{height:100px;overflow:auto;padding:4px 0}
+.step-code-row{display:flex;min-height:21px}
+.step-code-line{width:42px;text-align:right;padding:3px 10px 3px 0;color:#666;font-size:11px;flex-shrink:0}
+.step-code-text{position:relative;flex:1;padding:3px 10px 3px calc(var(--indent,0) * 18px + 10px);font-size:12px;line-height:1.45;color:#d4d4d4;white-space:pre;overflow-x:auto}
+.step-code-text::before{content:"";position:absolute;left:10px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.1) 13px 14px,transparent 14px 18px);pointer-events:none}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 12px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:18px;height:4px;border-radius:999px}
+#main-content{display:grid;grid-template-columns:minmax(520px,1.05fr) minmax(440px,.95fr);grid-template-areas:"graph state" "adj output" "code code";gap:14px;align-items:stretch}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:10px 12px;min-width:0}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#graph-panel{grid-area:graph;display:flex;flex-direction:column;min-height:500px}
+#state-panel{grid-area:state;display:flex;flex-direction:column;gap:8px;min-height:500px}
+#adj-panel{grid-area:adj}
+#output-panel{grid-area:output}
+#code-panel{grid-area:code;background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden}
+#graph-svg{width:100%;height:410px;display:block;background:#1f1f1f;border:1px solid #343434;border-radius:6px}
+.graph-note,.state-note,.output-note{font-size:11px;color:#858585;line-height:1.55;margin-top:8px}
+.edge{stroke:#555;stroke-width:2;opacity:.54;stroke-linecap:round}
+.edge.active-path-overlay{stroke:#c586c0;stroke-width:12;opacity:.34;pointer-events:none}
+.edge.active-path-core{stroke:#ffd166;stroke-width:3;opacity:.78;pointer-events:none}
+.edge.current{stroke:#569cd6;stroke-width:5;opacity:1}
+.edge.skip{stroke:#f44747;stroke-width:4;opacity:.95;stroke-dasharray:7 5}
+.edge.minimum{stroke:#4ec9b0;stroke-width:5;opacity:1}
+.path-node-halo{fill:none;stroke:#c586c0;stroke-width:8;opacity:.30;pointer-events:none}
+.node circle{fill:#2d2d30;stroke:#686870;stroke-width:2}
+.node.source circle{stroke:#dcdcaa;fill:rgba(220,220,170,.10)}
+.node.path circle{stroke:#c586c0;fill:rgba(197,134,192,.12)}
+.node.visited circle{stroke:#4ec9b0;fill:rgba(78,201,176,.12)}
+.node.current circle{stroke:#ce9178;stroke-width:4;fill:rgba(206,145,120,.20)}
+.node.minimum circle{stroke:#4ec9b0;stroke-width:4;fill:rgba(78,201,176,.18)}
+.node-label{fill:#f5f5f5;font-size:18px;font-weight:800;text-anchor:middle;dominant-baseline:middle}
+.node-sub{fill:#9a9a9a;font-size:10px;text-anchor:middle}
+.weight-label{fill:#dcdcaa;font-size:11px;font-weight:800;text-anchor:middle;paint-order:stroke;stroke:#1f1f1f;stroke-width:4px}
+.var-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.var-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:70px;min-width:0}
+.var-card.active{border-color:#ce9178;background:rgba(206,145,120,.10)}
+.var-card.current{border-color:#569cd6;background:rgba(86,156,214,.08)}
+.var-card.success{border-color:#4ec9b0;background:rgba(78,201,176,.09)}
+.var-card.warn{border-color:#dcdcaa;background:rgba(220,220,170,.08)}
+.var-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.var-value{font-size:16px;font-weight:800;color:#dcdcaa;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.var-desc{margin-top:4px;color:#9a9a9a;font-size:11px;line-height:1.35}
+.state-box{background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:8px;min-width:0}
+.visited-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.visited-cell{border:1px solid #343434;border-radius:5px;background:#1f1f1f;padding:6px;text-align:center;min-width:0}
+.visited-cell.true{border-color:#4ec9b0;background:rgba(78,201,176,.10)}
+.visited-cell.current{border-color:#ce9178;background:rgba(206,145,120,.13)}
+.visited-index{font-size:10px;color:#858585;margin-bottom:2px}
+.visited-value{font-size:12px;font-weight:800;color:#d4d4d4}
+.chip-row{display:flex;gap:5px;flex-wrap:wrap;min-height:30px;align-items:center}
+.chip{border:1px solid #3e3e42;background:#252526;border-radius:4px;padding:4px 8px;font-size:12px;color:#d4d4d4;white-space:nowrap}
+.chip.empty{color:#555;border-color:#343434;background:#1f1f1f}
+.chip.path{border-color:#c586c0;color:#f3c9ef;background:rgba(197,134,192,.12)}
+.chip.minimum{border-color:#4ec9b0;color:#b8f5e6;background:rgba(78,201,176,.11)}
+.chip.current{border-color:#569cd6;color:#d9ecff;background:rgba(86,156,214,.12)}
+.chip.discard{border-color:#f44747;color:#ffc0c0;background:rgba(244,71,71,.1)}
+.path-list{display:flex;flex-direction:column;gap:6px;max-height:136px;overflow:auto}
+.path-row{display:flex;align-items:center;gap:6px;border:1px solid #343434;background:#1f1f1f;border-radius:5px;padding:5px 6px}
+.path-row.latest{border-color:#4ec9b0;background:rgba(78,201,176,.09)}
+.path-row.discarded{border-color:#f44747;background:rgba(244,71,71,.07)}
+.path-index{min-width:28px;color:#858585;font-size:11px}
+.path-text{color:#d4d4d4;font-size:12px;white-space:nowrap}
+.path-cost{margin-left:auto;color:#dcdcaa;font-size:12px;font-weight:800}
+#recursion-tree{max-height:310px;overflow:auto;padding:8px 4px}
+.rt-list,.rt-list ul{list-style:none;margin:0;padding-left:78px;position:relative}
+.rt-list{padding-left:0;min-width:max-content}
+.rt-list ul{margin-top:8px}
+.rt-list ul::before{content:"";position:absolute;left:36px;top:0;bottom:18px;border-left:1px solid #3e3e42}
+.rt-item{position:relative;margin:9px 0}
+.rt-item::before{content:"";position:absolute;left:-42px;top:20px;width:42px;border-top:1px solid #3e3e42}
+.rt-list > .rt-item::before{display:none}
+.rt-node{display:inline-flex;flex-direction:column;gap:2px;min-width:162px;border:1px solid #343434;border-radius:6px;background:#1f1f1f;padding:6px 8px;transition:border-color .15s,background .15s,box-shadow .15s}
+.rt-node.ancestor{border-color:#569cd6;background:rgba(86,156,214,.08)}
+.rt-node.current{border-color:#ce9178;background:rgba(206,145,120,.16);box-shadow:0 0 0 1px rgba(206,145,120,.18) inset}
+.rt-node.found{border-color:#4ec9b0}
+.rt-node.discard{border-color:#f44747}
+.rt-call{font-size:11px;font-weight:800;color:#dcdcaa}
+.rt-path{font-size:10px;color:#858585;white-space:nowrap}
+.rt-cost{font-size:10px;color:#9cdcfe;white-space:nowrap}
+#adj-list{display:flex;flex-direction:column;gap:7px}
+.adj-row{display:grid;grid-template-columns:40px 20px 1fr;gap:6px;align-items:center}
+.adj-v{height:32px;border:1px solid #3e3e42;border-radius:5px;background:#2d2d30;display:flex;align-items:center;justify-content:center;font-weight:800;color:#dcdcaa}
+.adj-row.active .adj-v{border-color:#ce9178;background:rgba(206,145,120,.13)}
+.adj-arrow{color:#858585;text-align:center}
+.adj-neighbors{display:flex;gap:5px;flex-wrap:wrap}
+.adj-chip{min-width:58px;height:28px;border:1px solid #3e3e42;border-radius:4px;background:#1f1f1f;color:#d4d4d4;display:flex;align-items:center;justify-content:center;font-weight:800}
+.adj-chip.current{border-color:#569cd6;background:rgba(86,156,214,.14);color:#d9ecff}
+.adj-chip.skip{border-color:#f44747;background:rgba(244,71,71,.1);color:#ffc0c0}
+.adj-chip.path{border-color:#c586c0;background:rgba(197,134,192,.12);color:#f3c9ef}
+#output-lines{height:280px;overflow:auto;background:#1e1e1e;border:1px solid #343434;border-radius:6px;padding:6px 0}
+.output-row{display:flex;min-height:22px;line-height:22px}
+.output-row.new{background:rgba(220,220,170,.08);border-left:2px solid #dcdcaa}
+.output-row.found{background:rgba(78,201,176,.08);border-left:2px solid #4ec9b0}
+.output-row.discard{background:rgba(244,71,71,.08);border-left:2px solid #f44747}
+.output-line-no{width:38px;text-align:right;padding-right:10px;color:#555;font-size:11px;flex-shrink:0}
+.output-text{flex:1;color:#d4d4d4;font-size:12px;white-space:pre}
+.output-empty{color:#555;font-size:12px;padding:3px 10px}
+.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0;max-height:640px;overflow:auto}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.07);border-left-color:#dcdcaa}
+.lnum{width:44px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre;min-width:980px}
+.lcode::before{content:"";position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.cm{color:#6a9955;font-style:italic}.str{color:#ce9178}
+#nav{position:sticky;bottom:10px;z-index:5;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 18px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.35;cursor:default}
+#progress{color:#858585;min-width:116px;text-align:center;background:rgba(30,30,30,.88);border:1px solid #343434;border-radius:4px;padding:5px 8px}
+@media (max-width:1120px){#main-content{display:flex;flex-direction:column}#graph-panel,#state-panel{min-height:auto}.var-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#graph-svg{height:360px}}
+@media (max-width:640px){body{padding:12px}#step-desc{min-height:88px}.var-grid,.visited-grid{grid-template-columns:1fr 1fr}.adj-row{grid-template-columns:34px 18px 1fr}.nbtn{padding:7px 8px;flex:1 1 0;min-width:0}#graph-svg{height:330px}.lcode{min-width:820px}}
+</style>
+</head>
+<body>
+<h1>Traveling Salesman Problem / 외판원 순회 백트래킹</h1>
+<div id="subtitle">0번 정점에서 출발해 모든 정점을 정확히 한 번 방문한 뒤 다시 0번으로 돌아오는 모든 순회를 탐색하고, 그중 비용 합이 가장 작은 순회를 `minimum_path`에 저장합니다.</div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="step-code">
+  <div class="step-code-label">현재 실행 코드 / Current code</div>
+  <div id="step-code-lines"></div>
+</div>
+
+<div id="legend">
+  <div class="leg"><span class="leg-c" style="background:#555"></span>전체 그래프</div>
+  <div class="leg"><span class="leg-c" style="background:#c586c0"></span>현재 순회 path</div>
+  <div class="leg"><span class="leg-c" style="background:#569cd6"></span>현재 비교 간선</div>
+  <div class="leg"><span class="leg-c" style="background:#4ec9b0"></span>최종 minimum_path</div>
+  <div class="leg"><span class="leg-c" style="background:#f44747"></span>방문済 / discard</div>
+</div>
+
+<div id="main-content">
+  <section class="sbox" id="graph-panel">
+    <div class="slabel">Weighted Undirected Graph / source 0</div>
+    <svg id="graph-svg" viewBox="0 0 760 430" role="img" aria-label="Travelling salesman weighted graph"></svg>
+    <div class="graph-note">출발 정점 0은 처음에는 `visited`로 막지 않기 때문에 중간에 0으로 너무 일찍 돌아오면 `Discard`가 됩니다. 모든 정점을 방문하고 0으로 돌아온 순회만 `Found`입니다.</div>
+  </section>
+
+  <aside class="sbox" id="state-panel">
+    <div class="slabel">Runtime State</div>
+    <div class="var-grid" id="var-grid"></div>
+    <div class="state-box">
+      <div class="slabel">visited 배열</div>
+      <div class="visited-grid" id="visited-grid"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">현재 path</div>
+      <div class="chip-row" id="path-row"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">Found 순회 목록</div>
+      <div class="path-list" id="found-list"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">minimum_path</div>
+      <div class="chip-row" id="minimum-row"></div>
+    </div>
+    <div class="state-box">
+      <div class="slabel">재귀 함수 트리 / current call</div>
+      <div id="recursion-tree"></div>
+    </div>
+    <div class="state-note">`path`는 재귀 호출마다 값으로 복사됩니다. `wsum`은 지금까지 지나온 간선의 누적 비용이고, `min_wsum`보다 작으면 `minimum_path`가 갱신됩니다.</div>
+  </aside>
+
+  <section class="sbox" id="adj-panel">
+    <div class="slabel">vector&lt;Edge&gt; out_neighbors</div>
+    <div id="adj-list"></div>
+    <div class="graph-note">`AddBiEdge(u, v, weight)`는 `u -> v`와 `v -> u` 두 방향의 `Edge`를 각각 저장합니다.</div>
+  </section>
+
+  <section class="sbox" id="output-panel">
+    <div class="slabel">cout 출력 흐름</div>
+    <div id="output-lines"></div>
+    <div class="output-note">`Found`는 모든 정점을 방문하고 시작점으로 돌아온 순회입니다. `Discard`는 시작점으로 돌아왔지만 아직 모든 정점을 방문하지 못한 경로입니다.</div>
+  </section>
+
+  <section id="code-panel">
+    <div class="code-title">C++ Traveling Salesman Backtracking Code</div>
+    <div id="code-body"></div>
+  </section>
+</div>
+
+<div id="nav">
+  <button class="nbtn" id="first">처음</button>
+  <button class="nbtn" id="prev">이전</button>
+  <button class="nbtn" id="play">재생</button>
+  <div id="progress"></div>
+  <button class="nbtn" id="next">다음</button>
+  <button class="nbtn" id="last">마지막</button>
+</div>
+
+<script>
+const V = 4;
+const SOURCE = 0;
+const INF = 1000000;
+const BI_EDGES = [[0,1,20],[0,2,25],[0,3,30],[1,2,10],[2,3,35],[3,1,15]];
+const POS = {
+  0:{x:380,y:205},
+  1:{x:380,y:58},
+  2:{x:150,y:360},
+  3:{x:610,y:360}
+};
+const WEIGHT_POS = {
+  "0-1":{x:350,y:145},
+  "0-2":{x:307,y:282},
+  "0-3":{x:453,y:282},
+  "1-2":{x:243,y:185},
+  "1-3":{x:517,y:185},
+  "2-3":{x:380,y:386}
+};
+const CODE = String.raw`#include <iostream>
+#include <vector>
+#include <stack>
+using namespace std;
+
+struct Edge
+{
+    int u = 0;
+    int v = 0;
+    int weight = 0;
+};
+
+struct Vertex
+{
+    Vertex(int v) { value = v; }
+
+    int value = -1; // 변수 이름은 value지만 실질적으로는 배열에 이 정점이 저장된 인덱스입니다.
+    bool visited = false;
+
+    vector<Edge> out_neighbors; // 나가는 방향의 이웃 vertex들에 대한 포인터
+};
+
+class Graph
+{
+public:
+    Graph(int num_vertices)
+    {
+        vertices.resize(num_vertices);
+        for (int i = 0; i < num_vertices; i++)
+            vertices[i] = new Vertex(i);
+    }
+
+    ~Graph()
+    {
+        for (auto* v : vertices)
+            delete v;
+    }
+
+    void AddDiEdge(int u, int v, int weight) // 단방향 간선
+    {
+        vertices[u]->out_neighbors.push_back(Edge{ u, v, weight });
+    }
+
+    void AddBiEdge(int u, int v, int weight) // 양방향 간선
+    {
+        vertices[u]->out_neighbors.push_back(Edge{ u, v, weight });
+        vertices[v]->out_neighbors.push_back(Edge{ v, u, weight });
+    }
+
+    void TravellingSalesman(int source)
+    {
+        cout << "Start : " << vertices[source]->value << endl;
+
+        minimum_path.clear(); //path 초기화
+
+        for (auto* v : this->vertices)
+            v->visited = false; //방문 초기화
+
+        TravellingSalesmanHelper(vertices[source], vertices[source], vector<Vertex*>(), 0);
+
+        cout << "Minimum cost : " << min_wsum << endl;
+        cout << "Minimum path : ";
+        PrintPath(minimum_path);
+    }
+
+private:
+    vector<Vertex*> vertices;
+    vector<Vertex*> minimum_path;
+    int min_wsum = 1000000; // large number
+
+    void TravellingSalesmanHelper(Vertex* source, Vertex* sink, vector<Vertex*> path, int wsum)
+    {
+        path.push_back(source);
+
+        if (source == sink && path.size() > 1)
+        {
+            if (path.size() == vertices.size() + 1)
+            {
+                cout << "Found: ";
+                PrintPath(path);
+                cout << wsum << endl;
+
+                if (min_wsum > wsum)
+                {
+                    min_wsum = wsum;
+                    minimum_path = path;
+                }
+            }
+
+            else
+            {
+                cout << "Discard: ";
+                PrintPath(path);
+            }
+        }
+
+        else
+        {
+            if( source != sink)
+                source->visited = true;
+
+            for (auto e : source->out_neighbors)
+            {
+                if (!vertices[e.v]->visited)
+                {
+                    int total_weight = wsum + e.weight;
+                    TravellingSalesmanHelper(vertices[e.v], sink, path, total_weight);
+                }
+            }
+
+            source->visited = false;
+        }
+
+    }
+
+    void PrintPath(vector<Vertex*> path)
+    {
+        for (auto& v : path) {
+            cout << v->value;
+            if (&v != &path.back())
+                cout << " -> ";
+        }
+        cout << endl;
+    }
+};
+
+int main()
+{
+    Graph g(4);
+
+    // 주의: 양방향 간선 (undirected graph)
+    g.AddBiEdge(0, 1, 20);
+    g.AddBiEdge(0, 2, 25);
+    g.AddBiEdge(0, 3, 30);
+    g.AddBiEdge(1, 2, 10);
+    g.AddBiEdge(2, 3, 35);
+    g.AddBiEdge(3, 1, 15);
+
+    g.TravellingSalesman(0);
+
+    return 0;
+}`.split("\n");
+
+const L = {
+  ctor: linesOf("Graph(int num_vertices)", "vertices[i] = new Vertex(i);"),
+  addBi: linesOf("void AddBiEdge", "vertices[v]->out_neighbors.push_back"),
+  start: linesOf("void TravellingSalesman", "cout << \"Start"),
+  clear: [lineOf("minimum_path.clear")],
+  reset: linesOf("for (auto* v : this->vertices)", "v->visited = false; //방문 초기화"),
+  call: [lineOf("TravellingSalesmanHelper(vertices[source]")],
+  helperEntry: [lineOf("void TravellingSalesmanHelper"), lineOf("path.push_back(source);")],
+  completeIf: [lineOf("if (source == sink && path.size() > 1)")],
+  fullCycleIf: [lineOf("if (path.size() == vertices.size() + 1)")],
+  found: linesOf("cout << \"Found:", "cout << wsum << endl;"),
+  minCheck: [lineOf("if (min_wsum > wsum)")],
+  minSet: linesOf("min_wsum = wsum;", "minimum_path = path;"),
+  discard: linesOf("cout << \"Discard:", "PrintPath(path);", 2),
+  mark: linesOf("if( source != sink)", "source->visited = true;"),
+  loop: [lineOf("for (auto e : source->out_neighbors)")],
+  recurseIf: [lineOf("if (!vertices[e.v]->visited)")],
+  total: [lineOf("int total_weight = wsum + e.weight;")],
+  recurse: [lineOf("TravellingSalesmanHelper(vertices[e.v]")],
+  unmark: [lineOf("source->visited = false;")],
+  finalCost: [lineOf("cout << \"Minimum cost")],
+  finalPath: linesOf("cout << \"Minimum path", "PrintPath(minimum_path);")
+};
+
+let steps = [];
+let current = 0;
+let timer = null;
+
+function lineOf(fragment, start=0){
+  const idx = CODE.findIndex((line, i) => i >= start && line.includes(fragment));
+  return idx >= 0 ? idx + 1 : 1;
+}
+function linesOf(startFragment, endFragment, startAt=0){
+  const start = lineOf(startFragment, startAt);
+  const end = lineOf(endFragment, start - 1);
+  return Array.from({length:Math.max(1, end - start + 1)}, (_, i) => start + i);
+}
+function edgeKey(a,b){ return [Math.min(a,b), Math.max(a,b)].join("-"); }
+function pathText(path){ return path.length ? path.join(" -> ") : "empty"; }
+function pathEdges(path){
+  const set = new Set();
+  for(let i=1;i<path.length;i++) set.add(edgeKey(path[i-1], path[i]));
+  return set;
+}
+function edgeWeight(a,b){
+  const found = BI_EDGES.find(([u,v]) => edgeKey(u,v) === edgeKey(a,b));
+  return found ? found[2] : 0;
+}
+function cloneState(state){
+  return {
+    adj: state.adj.map(row => row.map(e => ({...e}))),
+    visited: [...state.visited],
+    stack: state.stack.map(frame => ({...frame, path:[...frame.path], candidate: frame.candidate ? {...frame.candidate} : null})),
+    minimumPath: [...state.minimumPath],
+    minWsum: state.minWsum,
+    outputs: state.outputs.map(row => ({...row})),
+    found: state.found.map(row => ({path:[...row.path], cost:row.cost})),
+    discarded: state.discarded.map(row => ({path:[...row.path], cost:row.cost}))
+  };
+}
+function makeState(){
+  return {
+    adj: Array.from({length:V}, () => []),
+    visited: Array(V).fill(false),
+    stack: [],
+    minimumPath: [],
+    minWsum: INF,
+    outputs: [],
+    found: [],
+    discarded: []
+  };
+}
+function currentFrame(state){ return state.stack[state.stack.length - 1] || null; }
+function currentPath(state){ return currentFrame(state)?.path || []; }
+function activeTreePath(step){
+  const top = currentFrame(step.state);
+  if(!top) return [];
+  if(top.path.length && top.path[top.path.length - 1] === top.source) return top.path;
+  return [...top.path, top.source];
+}
+function buildRecursionTree(){
+  const adj = Array.from({length:V}, () => []);
+  for(const [u,v,weight] of BI_EDGES){
+    adj[u].push({u,v,weight});
+    adj[v].push({u:v,v:u,weight});
+  }
+  function walk(source, sink, pathArg, wsum, visitedArg){
+    const path = [...pathArg, source];
+    const node = {source, sink, path, wsum, outcome:null, children:[]};
+    if(source === sink && path.length > 1){
+      node.outcome = path.length === V + 1 ? "found" : "discard";
+      return node;
+    }
+    const visited = [...visitedArg];
+    if(source !== sink) visited[source] = true;
+    for(const e of adj[source]){
+      if(!visited[e.v]){
+        node.children.push(walk(e.v, sink, path, wsum + e.weight, visited));
+      }
+    }
+    return node;
+  }
+  return walk(SOURCE, SOURCE, [], 0, Array(V).fill(false));
+}
+const RECURSION_TREE = buildRecursionTree();
+function addStep(state, desc, lines, extra={}){
+  steps.push(Object.assign({
+    state: cloneState(state),
+    desc,
+    lines,
+    currentNode: null,
+    currentEdge: null,
+    skippedEdge: null,
+    candidate: null,
+    newOutput: false,
+    newFound: false,
+    newDiscard: false,
+    showMinimumGraph: false,
+    phase: null
+  }, extra));
+}
+function addOutput(state, text, type="normal"){
+  state.outputs.push({text, type});
+}
+function addBiEdgeToState(state, u, v, weight){
+  state.adj[u].push({u,v,weight});
+  state.adj[v].push({u:v,v:u,weight});
+}
+function generateSteps(){
+  steps = [];
+  const state = makeState();
+  addStep(state, "Graph g(4)가 생성되고 vertices[0]부터 vertices[3]까지 Vertex 객체가 준비됩니다.", L.ctor);
+  BI_EDGES.forEach(([u,v,w]) => {
+    addBiEdgeToState(state, u, v, w);
+    addStep(state, `AddBiEdge(${u}, ${v}, ${w})가 실행되어 ${u}->${v}, ${v}->${u} 두 방향 Edge가 out_neighbors에 저장됩니다.`, L.addBi, {currentEdge:edgeKey(u,v), currentNode:u, candidate:v, phase:"add-edge"});
+  });
+  addOutput(state, "Start : 0", "new");
+  addStep(state, "TravellingSalesman(0)이 호출되어 시작점과 도착점이 모두 vertices[0]으로 설정됩니다.", L.start, {currentNode:SOURCE, newOutput:true});
+  state.minimumPath = [];
+  addStep(state, "minimum_path.clear()로 이전 최소 경로를 비웁니다.", L.clear, {currentNode:SOURCE});
+  state.visited = Array(V).fill(false);
+  addStep(state, "모든 정점의 visited를 false로 초기화합니다.", L.reset, {currentNode:SOURCE});
+  addStep(state, "TravellingSalesmanHelper(vertices[0], vertices[0], vector<Vertex*>(), 0)로 첫 재귀 호출을 시작합니다.", L.call, {currentNode:SOURCE});
+  helper(state, SOURCE, SOURCE, [], 0);
+  addOutput(state, `Minimum cost : ${state.minWsum}`, "new");
+  addStep(state, `탐색이 끝났습니다. min_wsum = ${state.minWsum}이 최소 순회 비용입니다.`, L.finalCost, {newOutput:true, showMinimumGraph:true});
+  addOutput(state, `Minimum path : ${pathText(state.minimumPath)}`, "new");
+  addStep(state, `최종 minimum_path는 ${pathText(state.minimumPath)}입니다.`, L.finalPath, {newOutput:true, showMinimumGraph:true});
+}
+function helper(state, source, sink, pathArg, wsum){
+  const frame = {source, sink, path:[...pathArg], wsum, candidate:null};
+  state.stack.push(frame);
+  addStep(state, `TravellingSalesmanHelper(${source}, ${sink}, [${pathArg.join(", ")}], ${wsum}) 호출 프레임이 올라갑니다.`, L.helperEntry, {currentNode:source});
+
+  frame.path = [...pathArg, source];
+  addStep(state, `path.push_back(source)로 ${source}가 추가됩니다. path = ${pathText(frame.path)}, wsum = ${wsum}.`, [lineOf("path.push_back(source);")], {currentNode:source});
+
+  if(source === sink && frame.path.length > 1){
+    addStep(state, `source == sink이고 path.size() > 1이므로 시작점 ${sink}로 돌아온 경로입니다.`, L.completeIf, {currentNode:source});
+    if(frame.path.length === V + 1){
+      state.found.push({path:[...frame.path], cost:wsum});
+      addOutput(state, `Found: ${pathText(frame.path)}`, "found");
+      addOutput(state, `${wsum}`, "found");
+      addStep(state, `모든 정점 방문 후 시작점으로 돌아왔으므로 Found 순회입니다. 비용 ${wsum}과 함께 목록에 저장합니다.`, L.found, {currentNode:source, newOutput:true, newFound:true});
+      addStep(state, `min_wsum(${state.minWsum}) > wsum(${wsum})인지 비교합니다.`, L.minCheck, {currentNode:source});
+      if(state.minWsum > wsum){
+        state.minWsum = wsum;
+        state.minimumPath = [...frame.path];
+        addStep(state, `${wsum}이 기존 최소 비용보다 작으므로 min_wsum과 minimum_path를 갱신합니다.`, L.minSet, {currentNode:source});
+      }else{
+        addStep(state, `${wsum}은 현재 min_wsum ${state.minWsum}보다 작지 않으므로 minimum_path를 유지합니다.`, L.minCheck, {currentNode:source});
+      }
+    }else{
+      state.discarded.push({path:[...frame.path], cost:wsum});
+      addOutput(state, `Discard: ${pathText(frame.path)}`, "discard");
+      addStep(state, `시작점으로 너무 일찍 돌아왔지만 아직 모든 정점을 방문하지 않았으므로 Discard입니다.`, L.discard, {currentNode:source, newOutput:true, newDiscard:true});
+    }
+    state.stack.pop();
+    addStep(state, `TravellingSalesmanHelper(${source}, ${sink}, ...) 호출이 종료되어 상위 호출로 복귀합니다.`, [lineOf("}")], {currentNode:source});
+    return;
+  }
+
+  if(source !== sink){
+    state.visited[source] = true;
+    addStep(state, `${source}는 시작점으로 돌아온 상태가 아니므로 visited[${source}] = true로 표시합니다.`, L.mark, {currentNode:source});
+  }else{
+    addStep(state, `첫 호출에서는 source와 sink가 같지만 path.size()가 1이므로 0번은 아직 visited로 막지 않습니다.`, L.mark, {currentNode:source});
+  }
+
+  for(const e of state.adj[source]){
+    frame.candidate = {...e};
+    const key = edgeKey(e.u, e.v);
+    addStep(state, `${source}의 out_neighbors에서 Edge{${e.u}, ${e.v}, ${e.weight}}를 꺼내 확인합니다.`, L.loop, {currentNode:source, currentEdge:key, candidate:e.v});
+    if(!state.visited[e.v]){
+      const totalWeight = wsum + e.weight;
+      addStep(state, `vertices[${e.v}]->visited가 false이므로 이동할 수 있습니다. total_weight = ${wsum} + ${e.weight} = ${totalWeight}.`, L.total, {currentNode:source, currentEdge:key, candidate:e.v});
+      addStep(state, `TravellingSalesmanHelper(vertices[${e.v}], sink, path, ${totalWeight})를 호출합니다.`, L.recurse, {currentNode:source, currentEdge:key, candidate:e.v});
+      helper(state, e.v, sink, frame.path, totalWeight);
+    }else{
+      addStep(state, `vertices[${e.v}]는 이미 visited=true이므로 같은 정점을 다시 방문하지 않도록 건너뜁니다.`, L.recurseIf, {currentNode:source, skippedEdge:key, candidate:e.v});
+    }
+  }
+  frame.candidate = null;
+  state.visited[source] = false;
+  addStep(state, `${source}의 모든 간선을 확인했습니다. 다른 순회 후보를 위해 visited[${source}] = false로 되돌립니다.`, L.unmark, {currentNode:source});
+  state.stack.pop();
+  addStep(state, `TravellingSalesmanHelper(${source}, ${sink}, ...) 호출이 종료되어 상위 호출로 복귀합니다.`, L.unmark, {currentNode:source});
+}
+function renderGraph(step){
+  const svg = document.getElementById("graph-svg");
+  const state = step.state;
+  const activePath = currentPath(state);
+  const activeEdges = pathEdges(activePath);
+  const minEdges = step.showMinimumGraph ? pathEdges(state.minimumPath) : new Set();
+  svg.innerHTML = "";
+  const visibleEdges = new Set();
+  state.adj.forEach((row, u) => row.forEach(e => visibleEdges.add(edgeKey(u, e.v))));
+  for(const [u,v,w] of BI_EDGES){
+    const key = edgeKey(u,v);
+    if(!visibleEdges.has(key)) continue;
+    let cls = "edge";
+    if(minEdges.has(key)) cls += " minimum";
+    appendEdgeLine(svg, key, cls);
+    appendWeightLabel(svg, u, v, w);
+  }
+  for(const key of activeEdges){
+    if(!visibleEdges.has(key)) continue;
+    appendEdgeLine(svg, key, "edge active-path-overlay");
+    appendEdgeLine(svg, key, "edge active-path-core");
+  }
+  if(step.currentEdge && step.phase !== "add-edge" && visibleEdges.has(step.currentEdge)){
+    appendEdgeLine(svg, step.currentEdge, "edge current");
+  }
+  if(step.skippedEdge && visibleEdges.has(step.skippedEdge)){
+    appendEdgeLine(svg, step.skippedEdge, "edge skip");
+  }
+  const activeNodes = new Set(activePath);
+  const minNodes = step.showMinimumGraph ? new Set(state.minimumPath) : new Set();
+  for(const i of activeNodes){
+    const p = POS[i];
+    svg.appendChild(svgEl("circle", {class:"path-node-halo", cx:p.x, cy:p.y, r:35}));
+  }
+  for(let i=0;i<V;i++){
+    const p = POS[i];
+    let cls = "node";
+    if(i === SOURCE) cls += " source";
+    if(minNodes.has(i)) cls += " minimum";
+    if(activeNodes.has(i)) cls += " path";
+    if(state.visited[i]) cls += " visited";
+    if(step.currentNode === i) cls += " current";
+    const g = svgEl("g", {class:cls});
+    g.appendChild(svgEl("circle", {cx:p.x, cy:p.y, r:28}));
+    const text = svgEl("text", {x:p.x, y:p.y - 3, class:"node-label"});
+    text.textContent = i;
+    g.appendChild(text);
+    const sub = svgEl("text", {x:p.x, y:p.y + 21, class:"node-sub"});
+    sub.textContent = state.visited[i] ? "visited" : "false";
+    g.appendChild(sub);
+    svg.appendChild(g);
+  }
+}
+function appendEdgeLine(svg, key, cls){
+  const [a,b] = key.split("-").map(Number);
+  const pa = POS[a], pb = POS[b];
+  svg.appendChild(svgEl("line", {class:cls, x1:pa.x, y1:pa.y, x2:pb.x, y2:pb.y}));
+}
+function appendWeightLabel(svg, u, v, weight){
+  const fixed = WEIGHT_POS[edgeKey(u, v)];
+  if(fixed){
+    const text = svgEl("text", {x:fixed.x, y:fixed.y, class:"weight-label"});
+    text.textContent = weight;
+    svg.appendChild(text);
+    return;
+  }
+  const pu = POS[u], pv = POS[v];
+  const mx = (pu.x + pv.x) / 2;
+  const my = (pu.y + pv.y) / 2;
+  const dx = pv.x - pu.x;
+  const dy = pv.y - pu.y;
+  const len = Math.max(1, Math.hypot(dx, dy));
+  const offset = (u === 1 && v === 2) || (u === 0 && v === 3) ? -14 : 14;
+  const text = svgEl("text", {x:mx + (-dy / len) * offset, y:my + (dx / len) * offset, class:"weight-label"});
+  text.textContent = weight;
+  svg.appendChild(text);
+}
+function svgEl(name, attrs){
+  const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for(const [k,v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+function renderState(step){
+  const state = step.state;
+  const frame = currentFrame(state);
+  const path = currentPath(state);
+  const candidateText = frame?.candidate ? `${frame.candidate.u}->${frame.candidate.v} w:${frame.candidate.weight}` : "-";
+  const cards = [
+    {name:"Vertex* source", value: frame ? `vertices[${frame.source}]` : "nullptr", desc: frame ? `value = ${frame.source}` : "호출 스택 비어 있음", cls:"active"},
+    {name:"Vertex* sink", value:`vertices[${SOURCE}]`, desc:"시작점으로 돌아와야 함", cls:"current"},
+    {name:"auto e", value:candidateText, desc: frame?.candidate ? `현재 확인 중인 간선` : "현재 간선 없음"},
+    {name:"wsum", value: frame ? frame.wsum : "-", desc:`현재 누적 비용`},
+    {name:"min_wsum", value: state.minWsum === INF ? "INF" : state.minWsum, desc:"지금까지 발견한 최소 비용", cls:"success"},
+    {name:"found cycles", value: state.found.length, desc:"완성된 순회 수", cls:"warn"}
+  ];
+  document.getElementById("var-grid").innerHTML = cards.map(card =>
+    `<div class="var-card ${card.cls || ""}"><div class="var-name">${esc(card.name)}</div><div class="var-value">${esc(card.value)}</div><div class="var-desc">${esc(card.desc)}</div></div>`
+  ).join("");
+  document.getElementById("visited-grid").innerHTML = state.visited.map((v, i) => {
+    let cls = "visited-cell";
+    if(v) cls += " true";
+    if(step.currentNode === i) cls += " current";
+    return `<div class="${cls}"><div class="visited-index">${i}</div><div class="visited-value">${v ? "true" : "false"}</div></div>`;
+  }).join("");
+  document.getElementById("path-row").innerHTML = path.length
+    ? path.map(v => `<span class="chip path">${v}</span>`).join("") + `<span class="chip current">cost ${frame?.wsum ?? 0}</span>`
+    : '<span class="chip empty">empty</span>';
+  document.getElementById("found-list").innerHTML = state.found.length
+    ? state.found.map((row, i) => `<div class="path-row ${step.newFound && i === state.found.length - 1 ? "latest" : ""}"><span class="path-index">#${i + 1}</span><span class="path-text">${esc(pathText(row.path))}</span><span class="path-cost">${row.cost}</span></div>`).join("")
+    : '<span class="chip empty">empty</span>';
+  document.getElementById("minimum-row").innerHTML = state.minimumPath.length
+    ? state.minimumPath.map(v => `<span class="chip minimum">${v}</span>`).join("") + `<span class="chip minimum">cost ${state.minWsum}</span>`
+    : '<span class="chip empty">empty</span>';
+  renderRecursionTree(step);
+}
+function renderRecursionTree(step){
+  const activePath = activeTreePath(step);
+  const activeIds = new Set(activePath.map((_, i) => activePath.slice(0, i + 1).join("-")));
+  const activeId = activePath.join("-");
+  document.getElementById("recursion-tree").innerHTML = `<ul class="rt-list">${renderRecursionNode(RECURSION_TREE, activeId, activeIds)}</ul>`;
+}
+function renderRecursionNode(node, activeId, activeIds){
+  const id = node.path.join("-");
+  let cls = "rt-node";
+  if(node.outcome) cls += ` ${node.outcome}`;
+  if(activeIds.has(id)) cls += id === activeId ? " current" : " ancestor";
+  const children = node.children.length
+    ? `<ul>${node.children.map(child => renderRecursionNode(child, activeId, activeIds)).join("")}</ul>`
+    : "";
+  const outcome = node.outcome ? ` / ${node.outcome}` : "";
+  return `<li class="rt-item"><div class="${cls}"><span class="rt-call">Helper(${node.source}, 0)${outcome}</span><span class="rt-path">${pathText(node.path)}</span><span class="rt-cost">wsum ${node.wsum}</span></div>${children}</li>`;
+}
+function renderAdj(step){
+  const state = step.state;
+  const frame = currentFrame(state);
+  const source = frame ? frame.source : step.currentNode;
+  const activePath = currentPath(state);
+  const activeEdges = pathEdges(activePath);
+  document.getElementById("adj-list").innerHTML = state.adj.map((row, u) => {
+    const active = source === u;
+    const cells = row.map(e => {
+      let cls = "adj-chip";
+      const key = edgeKey(e.u, e.v);
+      if(step.currentEdge === key && active && step.candidate === e.v) cls += " current";
+      if(step.skippedEdge === key && active && step.candidate === e.v) cls += " skip";
+      if(activeEdges.has(key)) cls += " path";
+      return `<span class="${cls}">${e.v} / ${e.weight}</span>`;
+    }).join("");
+    return `<div class="adj-row ${active ? "active" : ""}"><div class="adj-v">${u}</div><div class="adj-arrow">→</div><div class="adj-neighbors">${cells || '<span class="chip empty">empty</span>'}</div></div>`;
+  }).join("");
+}
+function renderOutput(step){
+  const panel = document.getElementById("output-lines");
+  if(!step.state.outputs.length){
+    panel.innerHTML = '<div class="output-empty">empty</div>';
+    return;
+  }
+  const startNew = step.newOutput ? Math.max(0, step.state.outputs.length - (step.newFound ? 2 : 1)) : step.state.outputs.length;
+  panel.innerHTML = step.state.outputs.map((row, i) => {
+    const cls = `output-row ${i >= startNew ? "new" : ""} ${row.type === "found" ? "found" : ""} ${row.type === "discard" ? "discard" : ""}`;
+    return `<div class="${cls}"><div class="output-line-no">${i+1}</div><div class="output-text">${esc(row.text)}</div></div>`;
+  }).join("");
+  panel.scrollTop = panel.scrollHeight;
+}
+function buildCodeBody(){
+  document.getElementById("code-body").innerHTML = CODE.map((line, idx) => codeRow(line, idx, false)).join("");
+}
+function renderStepCode(step){
+  const active = new Set(step.lines);
+  const first = Math.max(1, Math.min(...step.lines) - 2);
+  const last = Math.min(CODE.length, Math.max(...step.lines) + 2);
+  const rows = [];
+  for(let lineNo=first; lineNo<=last; lineNo++){
+    rows.push(codeRow(CODE[lineNo - 1], lineNo - 1, active.has(lineNo), true));
+  }
+  document.getElementById("step-code-lines").innerHTML = rows.join("");
+}
+function renderCodeBody(step){
+  const active = new Set(step.lines);
+  document.querySelectorAll("#code-body .cline").forEach((row, idx) => {
+    row.classList.toggle("hl", active.has(idx + 1));
+  });
+}
+function codeRow(line, idx, active, small=false){
+  const indent = Math.floor((line.match(/^\s*/)[0].length) / 4);
+  const trimmed = line.trimStart();
+  const rowCls = `cline ${active ? "hl" : ""}`;
+  const textCls = small ? "step-code-text" : "lcode";
+  const noCls = small ? "step-code-line" : "lnum";
+  return `<div class="${rowCls}"><div class="${noCls}">${idx + 1}</div><div class="${textCls}" style="--indent:${indent}">${trimmed ? colorize(trimmed) : "&nbsp;"}</div></div>`;
+}
+function colorize(text){
+  return esc(text)
+    .replace(/\b(struct|class|public|private|void|int|bool|for|if|else|return|auto|true|false|new|delete)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(Edge|Vertex|Graph|vector|stack)\b/g,'<span class="tp">$1</span>')
+    .replace(/\b(AddBiEdge|TravellingSalesman|TravellingSalesmanHelper|PrintPath|push_back|clear|size|resize)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(vertices|source|sink|path|minimum_path|visited|out_neighbors|weight|wsum|min_wsum|total_weight|e|u|v)\b/g,'<span class="id">$1</span>')
+    .replace(/\b(\d+)\b/g,'<span class="num">$1</span>')
+    .replace(/(&quot;[^&]*&quot;)/g,'<span class="str">$1</span>');
+}
+function esc(value){
+  return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function render(){
+  const step = steps[current];
+  document.getElementById("step-counter").textContent = `Step ${current + 1} / ${steps.length}`;
+  document.getElementById("step-desc").textContent = step.desc;
+  document.getElementById("progress").textContent = `${current + 1} / ${steps.length}`;
+  renderStepCode(step);
+  renderGraph(step);
+  renderState(step);
+  renderAdj(step);
+  renderOutput(step);
+  renderCodeBody(step);
+  document.getElementById("first").disabled = current === 0;
+  document.getElementById("prev").disabled = current === 0;
+  document.getElementById("next").disabled = current === steps.length - 1;
+  document.getElementById("last").disabled = current === steps.length - 1;
+  document.getElementById("play").textContent = timer ? "일시정지" : "재생";
+}
+function go(delta){
+  current = Math.max(0, Math.min(steps.length - 1, current + delta));
+  render();
+}
+function goTo(index){
+  current = Math.max(0, Math.min(steps.length - 1, index));
+  render();
+}
+function togglePlay(){
+  if(timer){
+    clearInterval(timer);
+    timer = null;
+    render();
+    return;
+  }
+  timer = setInterval(() => {
+    if(current >= steps.length - 1){
+      clearInterval(timer);
+      timer = null;
+      render();
+      return;
+    }
+    current += 1;
+    render();
+  }, 850);
+  render();
+}
+document.getElementById("first").addEventListener("click", () => goTo(0));
+document.getElementById("prev").addEventListener("click", () => go(-1));
+document.getElementById("next").addEventListener("click", () => go(1));
+document.getElementById("last").addEventListener("click", () => goTo(steps.length - 1));
+document.getElementById("play").addEventListener("click", togglePlay);
+document.addEventListener("keydown", event => {
+  if(event.target && ["INPUT","TEXTAREA","SELECT","BUTTON"].includes(event.target.tagName)) return;
+  if(event.key === "ArrowLeft") go(-1);
+  if(event.key === "ArrowRight") go(1);
+  if(event.key === "Home") goTo(0);
+  if(event.key === "End") goTo(steps.length - 1);
+  if(event.key === " ") {
+    event.preventDefault();
+    togglePlay();
+  }
+});
+generateSteps();
+buildCodeBody();
+render();
+</script>
+</body>
+</html>
